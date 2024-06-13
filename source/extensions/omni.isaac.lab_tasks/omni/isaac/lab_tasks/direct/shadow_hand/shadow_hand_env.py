@@ -109,9 +109,9 @@ class ShadowHandEnv(DirectRLEnv):
 
         self.prev_targets[:, self.actuated_dof_indices] = self.cur_targets[:, self.actuated_dof_indices]
 
-        self.hand.set_joint_position_target(
-            self.cur_targets[:, self.actuated_dof_indices], joint_ids=self.actuated_dof_indices
-        )
+        # self.hand.set_joint_position_target(
+        #     self.cur_targets[:, self.actuated_dof_indices], joint_ids=self.actuated_dof_indices
+        # )
 
     def _get_observations(self) -> dict:
         if self.cfg.asymmetric_obs:
@@ -171,6 +171,8 @@ class ShadowHandEnv(DirectRLEnv):
         if len(goal_env_ids) > 0:
             self._reset_target_pose(goal_env_ids)
 
+        total_reward = torch.zeros_like(total_reward)
+
         return total_reward
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
@@ -193,6 +195,10 @@ class ShadowHandEnv(DirectRLEnv):
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         if self.cfg.max_consecutive_success > 0:
             time_out = time_out | max_success_reached
+
+        out_of_reach = torch.zeros_like(out_of_reach)
+        time_out = torch.zeros_like(time_out)
+
         return out_of_reach, time_out
 
     def _reset_idx(self, env_ids: Sequence[int] | None):
