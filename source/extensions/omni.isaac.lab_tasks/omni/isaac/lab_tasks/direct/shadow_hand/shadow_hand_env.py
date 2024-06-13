@@ -109,9 +109,9 @@ class ShadowHandEnv(DirectRLEnv):
 
         self.prev_targets[:, self.actuated_dof_indices] = self.cur_targets[:, self.actuated_dof_indices]
 
-        # self.hand.set_joint_position_target(
-        #     self.cur_targets[:, self.actuated_dof_indices], joint_ids=self.actuated_dof_indices
-        # )
+        self.hand.set_joint_position_target(
+            self.cur_targets[:, self.actuated_dof_indices], joint_ids=self.actuated_dof_indices
+        )
 
     def _get_observations(self) -> dict:
         if self.cfg.asymmetric_obs:
