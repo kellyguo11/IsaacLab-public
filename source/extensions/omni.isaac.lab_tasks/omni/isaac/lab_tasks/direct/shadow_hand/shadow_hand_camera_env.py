@@ -39,8 +39,8 @@ class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
         physx=PhysxCfg(
             bounce_threshold_velocity=0.2,
             gpu_found_lost_pairs_capacity=2**18,
-            gpu_found_lost_aggregate_pairs_capacity=2**10,
-            gpu_total_aggregate_pairs_capacity=2**10,
+            gpu_found_lost_aggregate_pairs_capacity=2**12,
+            gpu_total_aggregate_pairs_capacity=2**12,
         ),
     )
 
@@ -78,8 +78,8 @@ class ShadowHandDepthCameraEnvCfg(ShadowHandEnvCfg):
         physx=PhysxCfg(
             bounce_threshold_velocity=0.2,
             gpu_found_lost_pairs_capacity=2**18,
-            gpu_found_lost_aggregate_pairs_capacity=2**10,
-            gpu_total_aggregate_pairs_capacity=2**10,
+            gpu_found_lost_aggregate_pairs_capacity=2**12,
+            gpu_total_aggregate_pairs_capacity=2**12,
         ),
     )
 
