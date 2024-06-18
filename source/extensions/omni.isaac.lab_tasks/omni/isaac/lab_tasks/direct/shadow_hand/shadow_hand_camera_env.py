@@ -64,6 +64,45 @@ class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
 
 
 @configclass
+class ShadowHandRGBDCameraEnvCfg(ShadowHandEnvCfg):
+    # scene
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=32, env_spacing=5.0, replicate_physics=True)
+
+    # simulation
+    sim: SimulationCfg = SimulationCfg(
+        dt=1 / 120,
+        physics_material=RigidBodyMaterialCfg(
+            static_friction=1.0,
+            dynamic_friction=1.0,
+        ),
+        physx=PhysxCfg(
+            bounce_threshold_velocity=0.2,
+            gpu_found_lost_pairs_capacity=2**18,
+            gpu_found_lost_aggregate_pairs_capacity=2**12,
+            gpu_total_aggregate_pairs_capacity=2**12,
+        ),
+    )
+
+    # camera
+    tiled_camera: TiledCameraCfg = TiledCameraCfg(
+        prim_path="/World/envs/env_.*/Camera",
+        offset=TiledCameraCfg.OffsetCfg(pos=(0.0, -0.2, 2.0), rot=(0.0, 0.0, 0.0, -1.0), convention="opengl"),
+        # offset=TiledCameraCfg.OffsetCfg(pos=(-2.0, 0.0, 0.75), rot=(-0.5, -0.5, 0.5, 0.5), convention="opengl"),
+        data_types=["rgb", "depth"],
+        spawn=sim_utils.PinholeCameraCfg(
+            focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
+        ),
+        width=240,
+        height=240,
+    )
+    write_image_to_file = False
+
+    # env
+    num_channels = 4
+    num_observations = num_channels * tiled_camera.height * tiled_camera.width
+
+
+@configclass
 class ShadowHandDepthCameraEnvCfg(ShadowHandEnvCfg):
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=32, env_spacing=5.0, replicate_physics=True)
@@ -180,15 +219,35 @@ class ShadowHandCameraEnv(ShadowHandEnv):
         # else:
         #     print("Unknown observations type!")
 
-        data_type = "rgb" if "rgb" in self.cfg.tiled_camera.data_types else "depth"
-        camera_data = self._tiled_camera.data.output[data_type].clone()
-        observations = {"policy": camera_data}
-        if self.cfg.asymmetric_obs:
-            observations = {"policy": camera_data, "critic": states}
-
-        if self.cfg.write_image_to_file:
-            data_scale = 1 if "rgb" in self.cfg.tiled_camera.data_types else 2.5
-            img = camera_data / data_scale
-            save_images_to_file(img, f"shadow_hand_{data_type}.png")
+        if self.cfg.num_channels == 1:
+            # depth
+            data_type = "depth"
+            camera_data = self._tiled_camera.data.output[data_type].clone() / 2.5
+            self._save_images("depth", camera_data)
+            observations = {"policy": camera_data}
+            if self.cfg.asymmetric_obs:
+                observations = {"policy": camera_data, "critic": states}
+        elif self.cfg.num_channels == 3:
+            # RGB
+            data_type = "rgb"
+            camera_data = self._tiled_camera.data.output[data_type].clone()
+            self._save_images("rgb", camera_data)
+            observations = {"policy": camera_data}
+            if self.cfg.asymmetric_obs:
+                observations = {"policy": camera_data, "critic": states}
+        elif self.cfg.num_channels == 4:
+            # RGB+D
+            depth_data = self._tiled_camera.data.output["depth"].clone() / 2.5
+            rgb_data = self._tiled_camera.data.output["rgb"].clone()
+            self._save_images("rgb", rgb_data)
+            self._save_images("depth", depth_data)
+            camera_data = torch.cat((rgb_data, depth_data), dim=-1)
+            observations = {"policy": camera_data}
+            if self.cfg.asymmetric_obs:
+                observations = {"policy": camera_data, "critic": states}
 
         return observations
+
+    def _save_images(self, data_type, camera_data):
+        if self.cfg.write_image_to_file:
+            save_images_to_file(camera_data, f"shadow_hand_{data_type}_32.png")
