@@ -57,6 +57,7 @@ app_start_time_end = time.perf_counter_ns()
 
 # enable benchmarking extension
 from omni.isaac.core.utils.extensions import enable_extension
+
 enable_extension("omni.isaac.benchmark.services")
 from omni.isaac.benchmark.services import BaseIsaacBenchmark
 
@@ -71,6 +72,7 @@ import torch
 from datetime import datetime
 
 import carb
+from omni.isaac.version import get_version
 from rl_games.common import env_configurations, vecenv
 from rl_games.common.algo_observer import IsaacAlgoObserver
 from rl_games.torch_runner import Runner
@@ -81,8 +83,6 @@ from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab_tasks.utils import load_cfg_from_registry, parse_env_cfg
 from omni.isaac.lab_tasks.utils.wrappers.rl_games import RlGamesGpuEnv, RlGamesVecEnvWrapper
-
-from omni.isaac.version import get_version
 
 imports_time_end = time.perf_counter_ns()
 
@@ -166,7 +166,7 @@ def main():
     rl_device = agent_cfg["params"]["config"]["device"]
     clip_obs = agent_cfg["params"]["env"].get("clip_observations", math.inf)
     clip_actions = agent_cfg["params"]["env"].get("clip_actions", math.inf)
-    
+
     task_startup_time_begin = time.perf_counter_ns()
 
     # create isaac environment
@@ -220,7 +220,7 @@ def main():
     # parse tensorboard file stats
     tensorboard_log_dir = os.path.join(log_root_path, log_dir, "summaries")
     # search log directory for latest log file
-    list_of_files = glob.glob(f"{tensorboard_log_dir}/*") # * means all if need specific format then *.csv
+    list_of_files = glob.glob(f"{tensorboard_log_dir}/*")  # * means all if need specific format then *.csv
     latest_file = max(list_of_files, key=os.path.getctime)
     log_data = _parse_tf_logs(latest_file)
 
@@ -232,11 +232,11 @@ def main():
     stats["Task startup time"] = {
         "Total task startup": (task_startup_time_end - task_startup_time_begin) / 1e6,
         "scene_creation_time": env.unwrapped.scene_creation_time * 1000,
-        "simulation_start_time": env.unwrapped.simulation_start_time * 1000
+        "simulation_start_time": env.unwrapped.simulation_start_time * 1000,
     }
     stats["Total startup time (Launch to train)"] = (task_startup_time_end - app_start_time_begin) / 1e6
 
-    stats["Train Raw"] = {
+    stats["Train Runtime Performance"] = {
         "Environment only step time": log_data["performance/step_time"],
         "Environment + Inference step time": log_data["performance/step_inference_time"],
         "Environment + Inference + Policy update time": log_data["performance/rl_update_time"],
@@ -245,11 +245,20 @@ def main():
         "Environment + Inference + Policy update FPS": log_data["performance/step_inference_rl_update_fps"],
     }
 
-    stats["Train"] = {}
-    for k, v in stats["Train Raw"].items():
-        stats["Train"][f"{k} (min)"] = min(stats["Train Raw"][k])
-        stats["Train"][f"{k} (max)"] = max(stats["Train Raw"][k])
-        stats["Train"][f"{k} (mean)"] = np.array(stats["Train Raw"][k]).mean()
+    stats["Train Runtime Performance Summary"] = {}
+    for k, v in stats["Train Runtime Performance"].items():
+        stats["Train Runtime Performance Summary"][f"{k} (min)"] = min(stats["Train Runtime Performance"][k])
+        stats["Train Runtime Performance Summary"][f"{k} (max)"] = max(stats["Train Runtime Performance"][k])
+        stats["Train Runtime Performance Summary"][f"{k} (mean)"] = np.array(
+            stats["Train Runtime Performance"][k]
+        ).mean()
+
+    stats["Train Policy Performance"] = {
+        "Rewards per iteration": log_data["rewards/iter"],
+        "Episode lengths per iteration": log_data["episode_lengths/iter"],
+        "Max reward": max(log_data["rewards/iter"]),
+        "Max episode length": max(log_data["episode_lengths/iter"]),
+    }
 
     print(json.dumps(stats, indent=4))
 
