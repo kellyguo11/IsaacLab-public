@@ -108,9 +108,11 @@ class DirectRLEnv(gym.Env):
             carb.log_warn(msg)
 
         # generate scene
-        with Timer("[INFO]: Time taken for scene creation"):
+        scene_creation_timer = Timer("[INFO]: Time taken for scene creation")
+        with scene_creation_timer:
             self.scene = InteractiveScene(self.cfg.scene)
             self._setup_scene()
+        self.scene_creation_time = scene_creation_timer.total_run_time
         print("[INFO]: Scene manager: ", self.scene)
 
         # set up camera viewport controller
@@ -127,8 +129,10 @@ class DirectRLEnv(gym.Env):
         # note: when started in extension mode, first call sim.reset_async() and then initialize the managers
         if builtins.ISAAC_LAUNCHED_FROM_TERMINAL is False:
             print("[INFO]: Starting the simulation. This may take a few seconds. Please wait...")
-            with Timer("[INFO]: Time taken for simulation start"):
+            simulation_start_timer = Timer("[INFO]: Time taken for simulation start")
+            with simulation_start_timer:
                 self.sim.reset()
+            self.simulation_start_time = simulation_start_timer.total_run_time
 
         # -- event manager used for randomization
         if self.cfg.events:
