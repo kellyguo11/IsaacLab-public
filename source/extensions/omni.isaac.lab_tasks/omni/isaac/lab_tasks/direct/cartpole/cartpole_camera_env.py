@@ -31,7 +31,7 @@ class CartpoleRGBCameraEnvCfg(DirectRLEnvCfg):
     episode_length_s = 5.0
     action_scale = 100.0  # [N]
     num_actions = 1
-    num_channels = 3
+    num_channels = 4
     num_states = 0
 
     # simulation
@@ -60,7 +60,7 @@ class CartpoleRGBCameraEnvCfg(DirectRLEnvCfg):
     viewer = ViewerCfg(eye=(20.0, 20.0, 20.0))
 
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=256, env_spacing=20.0, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=1024, env_spacing=20.0, replicate_physics=True)
 
     # reset
     max_cart_pos = 3.0  # the cart is reset if it exceeds that position [m]
@@ -149,14 +149,27 @@ class CartpoleCameraEnv(DirectRLEnv):
         self.actions = torch.zeros(self.num_envs, self.num_actions, device=self.sim.device)
 
     def _setup_scene(self):
+        
         """Setup the scene with the cartpole and camera."""
         self._cartpole = Articulation(self.cfg.robot_cfg)
         self._tiled_camera = TiledCamera(self.cfg.tiled_camera)
-        # add ground plane
-        spawn_ground_plane(prim_path="/World/ground", cfg=GroundPlaneCfg(size=(500, 500)))
+
+        # from omni.isaac.lab.sensors.camera.utils import convert_orientation_convention
+        # rot = torch.tensor(self.cfg.tiled_camera.offset.rot, dtype=torch.float32).unsqueeze(0)
+        # rot_offset = convert_orientation_convention(rot, origin=self.cfg.tiled_camera.offset.convention, target="opengl")
+        # rot_offset = rot_offset.squeeze(0).numpy()
+        # self.cfg.tiled_camera.spawn.func(
+        #     self.cfg.tiled_camera.prim_path, self.cfg.tiled_camera.spawn, translation=self.cfg.tiled_camera.offset.pos, orientation=rot_offset
+        # )
+
+        # # add ground plane
+        # spawn_ground_plane(prim_path="/World/ground", cfg=GroundPlaneCfg(size=(500, 500)))
         # clone, filter, and replicate
         self.scene.clone_environments(copy_from_source=False)
         self.scene.filter_collisions(global_prim_paths=[])
+
+        # camera_paths = [f"/World/envs/env_{i}/Camera" for i in range(self.num_envs)]
+        # self.create_tiled_sensor(cameras=camera_paths, tile_resolution=(self.cfg.tiled_camera.width, self.cfg.tiled_camera.height))
 
         # add articultion and sensors to scene
         self.scene.articulations["cartpole"] = self._cartpole
@@ -173,6 +186,7 @@ class CartpoleCameraEnv(DirectRLEnv):
 
     def _get_observations(self) -> dict:
         data_type = "rgb" if "rgb" in self.cfg.tiled_camera.data_types else "depth"
+        # self._update_buffers_impl()
         observations = {"policy": self._tiled_camera.data.output[data_type].clone()}
 
         if self.cfg.write_image_to_file:

@@ -75,7 +75,7 @@ def raycast_mesh_kernel(
 
 @wp.kernel
 def reshape_tiled_image(
-    tiled_image_buffer: wp.array(dtype=float),
+    tiled_image_buffer: wp.array(dtype=wp.uint8),
     batched_image: wp.array(dtype=float, ndim=4),
     image_height: int,
     image_width: int,
@@ -114,4 +114,4 @@ def reshape_tiled_image(
 
     # copy the pixel values into the batched image
     for i in range(num_channels):
-        batched_image[camera_id, height_id, width_id, i] = tiled_image_buffer[pixel_start + i]
+        batched_image[camera_id, height_id, width_id, i] = wp.float32(tiled_image_buffer[pixel_start + i])
