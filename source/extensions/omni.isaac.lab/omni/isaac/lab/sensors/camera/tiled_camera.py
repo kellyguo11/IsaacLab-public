@@ -12,10 +12,11 @@ from collections.abc import Sequence
 from tensordict import TensorDict
 from typing import TYPE_CHECKING, Any
 
+import carb
 import omni.usd
 import warp as wp
 from omni.isaac.core.prims import XFormPrimView
-from pxr import UsdGeom
+from pxr import UsdGeom, Usd
 
 from omni.isaac.lab.utils.warp.kernels import reshape_tiled_image
 
@@ -157,20 +158,36 @@ class TiledCamera(Camera):
 
         # start the orchestrator (if not already started)
         rep.orchestrator._orchestrator._is_started = True
-        # Create a tiled sensor from the camera prims
-        rep_sensor = rep.create.tiled_sensor(
-            cameras=self._view.prim_paths,
-            camera_resolution=[self.image_shape[1], self.image_shape[0]],
-            tiled_resolution=self._tiled_image_shape(),
-            output_types=self.cfg.data_types,
-        )
-        # Get render product
-        render_prod_path = rep.create.render_product(camera=rep_sensor, resolution=self._tiled_image_shape())
-        if not isinstance(render_prod_path, str):
-            render_prod_path = render_prod_path.path
-        self._render_product_paths = [render_prod_path]
+        # # Create a tiled sensor from the camera prims
+        # rep_sensor = rep.create.tiled_sensor(
+        #     cameras=self._view.prim_paths,
+        #     camera_resolution=[self.image_shape[1], self.image_shape[0]],
+        #     tiled_resolution=self._tiled_image_shape(),
+        #     output_types=self.cfg.data_types,
+        # )
+        # # Get render product
+        # render_prod_path = rep.create.render_product(camera=rep_sensor, resolution=self._tiled_image_shape())
+        full_resolution = self._tiled_image_shape()
+
+        # Set carb settings
+        carb_settings = carb.settings.get_settings()
+        carb_settings.set("/rtx/viewTile/height", self.cfg.height)
+        carb_settings.set("/rtx/viewTile/width", self.cfg.width)
+        carb_settings.set("/rtx/viewTile/count", self._view.count)
+        
+        # Create render product
+        rp = rep.create.render_product(self._view.prim_paths[0], full_resolution)
+        
+        # Attach all cameras
+        rp_prim = stage.GetPrimAtPath(rp.path)
+        with Usd.EditContext(stage, stage.GetSessionLayer()):
+            rp_prim.GetRelationship("camera").SetTargets(self._view.prim_paths)
+
+        # if not isinstance(rp_prim, str):
+        #     render_prod_path = rp_prim.path
+        self._render_product_paths = [rp.path]
         # Attach the annotator
-        self._annotator = rep.AnnotatorRegistry.get_annotator("RtxSensorGpu", device=self.device, do_array_copy=False)
+        self._annotator = rep.AnnotatorRegistry.get_annotator("rgb", device=self.device, do_array_copy=False)
         self._annotator.attach(self._render_product_paths)
 
         # Create internal buffers
@@ -183,9 +200,12 @@ class TiledCamera(Camera):
         # Extract the flattened image buffer
         tiled_data_buffer = self._annotator.get_data()
         if isinstance(tiled_data_buffer, np.ndarray):
-            tiled_data_buffer = wp.array(tiled_data_buffer, device=self.device)
+            tiled_data_buffer = wp.array(tiled_data_buffer, device=self.device, dtype=wp.float32)
         else:
             tiled_data_buffer = tiled_data_buffer.to(device=self.device)
+
+        # from torchvision.utils import save_image
+        # save_image(wp.to_torch(tiled_data_buffer).cpu().permute(2, 0, 1)/255, "raw.png")
 
         # The offset is needed when the buffer contains rgb and depth (the buffer has RGB data first and then depth)
         offset = self._data.output["rgb"].numel() if "rgb" in self.cfg.data_types else 0
@@ -194,7 +214,7 @@ class TiledCamera(Camera):
                 kernel=reshape_tiled_image,
                 dim=(self._view.count, self.cfg.height, self.cfg.width),
                 inputs=[
-                    tiled_data_buffer,
+                    tiled_data_buffer.flatten(),
                     wp.from_torch(self._data.output[data_type]),  # zero-copy alias
                     *list(self._data.output[data_type].shape[1:]),  # height, width, num_channels
                     self._tiling_grid_shape()[0],  # num_tiles_x
@@ -202,6 +222,8 @@ class TiledCamera(Camera):
                 ],
                 device=self.device,
             )
+
+        self._data.output["rgb"] /= 255.0
 
     """
     Private Helpers
@@ -230,7 +252,7 @@ class TiledCamera(Camera):
         data_dict = dict()
         if "rgb" in self.cfg.data_types:
             data_dict["rgb"] = torch.zeros(
-                (self._view.count, self.cfg.height, self.cfg.width, 3), device=self.device
+                (self._view.count, self.cfg.height, self.cfg.width, 4), device=self.device
             ).contiguous()
         if "depth" in self.cfg.data_types:
             data_dict["depth"] = torch.zeros(
