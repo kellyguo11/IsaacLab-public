@@ -133,8 +133,8 @@ def main():
     while simulation_app.is_running():
         while num_frames < args_cli.num_frames:
             # get upper and lower bounds of action space, sample actions randomly on this interval
-            action_high = env.single_action_space.high[0]
-            action_low = env.single_action_space.low[0]
+            action_high = 1
+            action_low = -1
             actions = (action_high - action_low) * torch.rand(
                 env.num_envs, env.single_action_space.shape[0], device=env.device
             ) - action_high
