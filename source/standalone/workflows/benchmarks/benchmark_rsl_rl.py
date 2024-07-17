@@ -13,7 +13,6 @@
 """Launch Isaac Sim Simulator first."""
 
 import argparse
-import json
 import time
 
 from omni.isaac.lab.app import AppLauncher
@@ -80,7 +79,17 @@ from omni.isaac.core.utils.extensions import enable_extension
 enable_extension("omni.isaac.benchmark.services")
 from omni.isaac.benchmark.services import BaseIsaacBenchmark
 
-from source.standalone.workflows.benchmarks.utils import *
+from source.standalone.workflows.benchmarks.utils import (
+    log_app_start_time,
+    log_python_imports_time,
+    log_rl_policy_episode_lengths,
+    log_rl_policy_rewards,
+    log_runtime_step_times,
+    log_scene_creation_time,
+    log_simulation_start_time,
+    log_task_start_time,
+    parse_tf_logs,
+)
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -174,9 +183,6 @@ def main():
     benchmark.store_measurements()
     benchmark.stop()
 
-    # close the simulator
-    env.close()
-
     # parse tensorboard file stats
     log_data = parse_tf_logs(log_dir)
 
@@ -196,6 +202,9 @@ def main():
     log_runtime_step_times(benchmark, rl_training_times, compute_stats=True)
     log_rl_policy_rewards(benchmark, log_data["Train/mean_reward"])
     log_rl_policy_episode_lengths(benchmark, log_data["Train/mean_episode_length"])
+
+    # close the simulator
+    env.close()
 
 
 if __name__ == "__main__":

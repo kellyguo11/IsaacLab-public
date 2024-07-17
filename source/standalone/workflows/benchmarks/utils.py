@@ -6,24 +6,18 @@
 
 import glob
 import os
-from typing import List
 
-from tensorboard.backend.event_processing import event_accumulator
-
-from omni.isaac.benchmark.services.metrics.measurements import (
-    DictMeasurement,
-    ListMeasurement,
-    SingleMeasurement,
-)
 from omni.isaac.benchmark.services import BaseIsaacBenchmark
+from omni.isaac.benchmark.services.metrics.measurements import DictMeasurement, ListMeasurement, SingleMeasurement
+from tensorboard.backend.event_processing import event_accumulator
 
 
 def parse_tf_logs(log_dir: str):
-    """ Search for the latest tfevents file in log_dir folder and returns
-        the tensorboard logs in a dictionary.
+    """Search for the latest tfevents file in log_dir folder and returns
+    the tensorboard logs in a dictionary.
 
-        Args:
-            log_dir: directory used to search for tfevents files
+    Args:
+        log_dir: directory used to search for tfevents files
     """
 
     # search log directory for latest log file
@@ -53,28 +47,34 @@ def log_min_max_mean_stats(benchmark: BaseIsaacBenchmark, values: dict):
         benchmark.store_custom_measurement("runtime", measurement)
         measurement = SingleMeasurement(name=f"Max {k}", value=max(v), unit="ms")
         benchmark.store_custom_measurement("runtime", measurement)
-        measurement = SingleMeasurement(name=f"Mean {k}", value=sum(v)/len(v), unit="ms")
+        measurement = SingleMeasurement(name=f"Mean {k}", value=sum(v) / len(v), unit="ms")
         benchmark.store_custom_measurement("runtime", measurement)
+
 
 def log_app_start_time(benchmark: BaseIsaacBenchmark, value: float):
     measurement = SingleMeasurement(name="App Launch Time", value=value, unit="ms")
     benchmark.store_custom_measurement("startup", measurement)
 
+
 def log_python_imports_time(benchmark: BaseIsaacBenchmark, value: float):
     measurement = SingleMeasurement(name="Python Imports Time", value=value, unit="ms")
     benchmark.store_custom_measurement("startup", measurement)
+
 
 def log_task_start_time(benchmark: BaseIsaacBenchmark, value: float):
     measurement = SingleMeasurement(name="Total Task Start Time", value=value, unit="ms")
     benchmark.store_custom_measurement("startup", measurement)
 
+
 def log_scene_creation_time(benchmark: BaseIsaacBenchmark, value: float):
     measurement = SingleMeasurement(name="Scene Creation Time", value=value, unit="ms")
     benchmark.store_custom_measurement("startup", measurement)
 
+
 def log_simulation_start_time(benchmark: BaseIsaacBenchmark, value: float):
     measurement = SingleMeasurement(name="Simulation Start Time", value=value, unit="ms")
     benchmark.store_custom_measurement("startup", measurement)
+
 
 def log_runtime_step_times(benchmark: BaseIsaacBenchmark, value: dict, compute_stats=True):
     measurement = DictMeasurement(name="Step Frametimes", value=value)
@@ -82,14 +82,16 @@ def log_runtime_step_times(benchmark: BaseIsaacBenchmark, value: dict, compute_s
     if compute_stats:
         log_min_max_mean_stats(benchmark, value)
 
-def log_rl_policy_rewards(benchmark: BaseIsaacBenchmark, value: List):
+
+def log_rl_policy_rewards(benchmark: BaseIsaacBenchmark, value: list):
     measurement = ListMeasurement(name="Rewards", value=value)
     benchmark.store_custom_measurement("train", measurement)
     # log max reward
     measurement = SingleMeasurement(name="Max Rewards", value=max(value), unit="float")
     benchmark.store_custom_measurement("train", measurement)
 
-def log_rl_policy_episode_lengths(benchmark: BaseIsaacBenchmark, value: List):
+
+def log_rl_policy_episode_lengths(benchmark: BaseIsaacBenchmark, value: list):
     measurement = ListMeasurement(name="Episode Lengths", value=value)
     benchmark.store_custom_measurement("train", measurement)
     # log max episode length

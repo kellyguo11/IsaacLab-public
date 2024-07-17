@@ -8,7 +8,6 @@
 """Launch Isaac Sim Simulator first."""
 
 import argparse
-import json
 import time
 
 from omni.isaac.lab.app import AppLauncher
@@ -63,16 +62,12 @@ from omni.isaac.benchmark.services import BaseIsaacBenchmark
 
 imports_time_begin = time.perf_counter_ns()
 
-import glob
 import gymnasium as gym
 import math
-import numpy as np
 import os
 import torch
 from datetime import datetime
 
-import carb
-from omni.isaac.version import get_version
 from rl_games.common import env_configurations, vecenv
 from rl_games.common.algo_observer import IsaacAlgoObserver
 from rl_games.torch_runner import Runner
@@ -86,7 +81,17 @@ from omni.isaac.lab_tasks.utils.wrappers.rl_games import RlGamesGpuEnv, RlGamesV
 
 imports_time_end = time.perf_counter_ns()
 
-from source.standalone.workflows.benchmarks.utils import *
+from source.standalone.workflows.benchmarks.utils import (
+    log_app_start_time,
+    log_python_imports_time,
+    log_rl_policy_episode_lengths,
+    log_rl_policy_rewards,
+    log_runtime_step_times,
+    log_scene_creation_time,
+    log_simulation_start_time,
+    log_task_start_time,
+    parse_tf_logs,
+)
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -206,9 +211,6 @@ def main():
     benchmark.store_measurements()
     benchmark.stop()
 
-    # close the simulator
-    env.close()
-
     # parse tensorboard file stats
     tensorboard_log_dir = os.path.join(log_root_path, log_dir, "summaries")
     log_data = parse_tf_logs(tensorboard_log_dir)
@@ -233,36 +235,8 @@ def main():
     log_rl_policy_rewards(benchmark, log_data["rewards/iter"])
     log_rl_policy_episode_lengths(benchmark, log_data["episode_lengths/iter"])
 
-    # # prepare stats for output
-    # stats = dict()
-
-    # stats["App launch time"] = (app_start_time_end - app_start_time_begin) / 1e6
-    # stats["Python imports time"] = (imports_time_end - imports_time_begin) / 1e6
-    # stats["Task startup time"] = {
-    #     "Total task startup": (task_startup_time_end - task_startup_time_begin) / 1e6,
-    #     "scene_creation_time": env.unwrapped.scene_creation_time * 1000,
-    #     "simulation_start_time": env.unwrapped.simulation_start_time * 1000,
-    # }
-    # stats["Total startup time (Launch to train)"] = (task_startup_time_end - app_start_time_begin) / 1e6
-
-    
-
-    # stats["Train Runtime Performance Summary"] = {}
-    # for k, v in stats["Train Runtime Performance"].items():
-    #     stats["Train Runtime Performance Summary"][f"{k} (min)"] = min(stats["Train Runtime Performance"][k])
-    #     stats["Train Runtime Performance Summary"][f"{k} (max)"] = max(stats["Train Runtime Performance"][k])
-    #     stats["Train Runtime Performance Summary"][f"{k} (mean)"] = np.array(
-    #         stats["Train Runtime Performance"][k]
-    #     ).mean()
-
-    # stats["Train Policy Performance"] = {
-    #     "Rewards per iteration": log_data["rewards/iter"],
-    #     "Episode lengths per iteration": log_data["episode_lengths/iter"],
-    #     "Max reward": max(log_data["rewards/iter"]),
-    #     "Max episode length": max(log_data["episode_lengths/iter"]),
-    # }
-
-    # print(json.dumps(stats, indent=4))
+    # close the simulator
+    env.close()
 
 
 if __name__ == "__main__":

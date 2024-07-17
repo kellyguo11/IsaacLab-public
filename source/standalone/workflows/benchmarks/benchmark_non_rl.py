@@ -8,7 +8,6 @@
 """Launch Isaac Sim Simulator first."""
 
 import argparse
-import json
 import time
 
 from omni.isaac.lab.app import AppLauncher
@@ -61,7 +60,14 @@ from omni.isaac.core.utils.extensions import enable_extension
 enable_extension("omni.isaac.benchmark.services")
 from omni.isaac.benchmark.services import BaseIsaacBenchmark
 
-from source.standalone.workflows.benchmarks.utils import *
+from source.standalone.workflows.benchmarks.utils import (
+    log_app_start_time,
+    log_python_imports_time,
+    log_runtime_step_times,
+    log_scene_creation_time,
+    log_simulation_start_time,
+    log_task_start_time,
+)
 
 imports_time_begin = time.perf_counter_ns()
 
@@ -124,8 +130,6 @@ def main():
 
     env.reset()
 
-    reset_time_end = time.perf_counter_ns()
-
     benchmark.set_phase("benchmark")
 
     # counter for number of frames to run for
@@ -173,34 +177,6 @@ def main():
     log_scene_creation_time(benchmark, env.unwrapped.scene_creation_time * 1000)
     log_simulation_start_time(benchmark, env.unwrapped.simulation_start_time * 1000)
     log_runtime_step_times(benchmark, environment_step_times, compute_stats=True)
-
-    # stats = dict()
-    # stats["App launch time"] = (app_start_time_end - app_start_time_begin) / 1e6
-    # stats["Python imports time"] = (imports_time_end - imports_time_begin) / 1e6
-    # stats["Task startup time"] = {
-    #     "Total task startup": (task_startup_time_end - task_startup_time_begin) / 1e6,
-    #     # "scene_creation_time": env.scene_creation_time * 1000,
-    #     # "simulation_start_time": env.simulation_start_time * 1000,
-    #     "reset_time": (reset_time_end - task_startup_time_end) / 1e6,
-    # }
-    # # stats["Task startup time"] = (task_startup_time_end - task_startup_time_begin) / 1e6
-    # stats["Total startup time (Launch to train)"] = (task_startup_time_end - app_start_time_begin) / 1e6
-    # stats["Environment step"] = {
-    #     "Environment Step time": step_times.tolist(),
-    #     "FPS": fps.tolist(),
-    #     "Effective FPS": (fps * env.num_envs).tolist(),
-    #     "Environment Step time (min)": step_times.min(),
-    #     "Environment Step time (max)": step_times.max(),
-    #     "Environment Step time (mean)": step_times.mean(),
-    #     "FPS (min)": fps.min(),
-    #     "FPS (max)": fps.max(),
-    #     "FPS (mean)": fps.mean(),
-    #     "Effective FPS (min)": effective_fps.min(),
-    #     "Effective FPS (max)": effective_fps.max(),
-    #     "Effective FPS (mean)": effective_fps.mean(),
-    # }
-
-    # print(json.dumps(stats, indent=4))
 
     # close the simulator
     env.close()
