@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Script to train RL agent with RL-Games."""
+"""Script to benchmark non-RL environment."""
 
 """Launch Isaac Sim Simulator first."""
 
@@ -32,7 +32,7 @@ parser.add_argument("--num_frames", type=int, default=100, help="Number of envir
 parser.add_argument(
     "--benchmark_backend",
     type=str,
-    default="JSONFileMetrics",
+    default="OsmoKPIFile",
     choices=["LocalLogMetrics", "JSONFileMetrics", "OsmoKPIFile"],
     help="Benchmarking backend options, defaults OsmoKPIFile",
 )
@@ -60,6 +60,8 @@ from omni.isaac.core.utils.extensions import enable_extension
 
 enable_extension("omni.isaac.benchmark.services")
 from omni.isaac.benchmark.services import BaseIsaacBenchmark
+
+from source.standalone.workflows.benchmarks.utils import *
 
 imports_time_begin = time.perf_counter_ns()
 
@@ -133,10 +135,10 @@ def main():
     while simulation_app.is_running():
         while num_frames < args_cli.num_frames:
             # get upper and lower bounds of action space, sample actions randomly on this interval
-            action_high = env.single_action_space.high[0]
-            action_low = env.single_action_space.low[0]
+            action_high = 1
+            action_low = -1
             actions = (action_high - action_low) * torch.rand(
-                env.num_envs, env.single_action_space.shape[0], device=env.device
+                env.unwrapped.num_envs, env.unwrapped.single_action_space.shape[0], device=env.unwrapped.device
             ) - action_high
 
             # env stepping
@@ -156,35 +158,49 @@ def main():
     # compute stats
     step_times = np.array(step_times) / 1e6  # ns to ms
     fps = 1.0 / (step_times / 1000)
-    effective_fps = fps * env.num_envs
+    effective_fps = fps * env.unwrapped.num_envs
 
-    stats = dict()
-    stats["App launch time"] = (app_start_time_end - app_start_time_begin) / 1e6
-    stats["Python imports time"] = (imports_time_end - imports_time_begin) / 1e6
-    stats["Task startup time"] = {
-        "Total task startup": (task_startup_time_end - task_startup_time_begin) / 1e6,
-        "scene_creation_time": env.scene_creation_time * 1000,
-        "simulation_start_time": env.simulation_start_time * 1000,
-        "reset_time": (reset_time_end - task_startup_time_end) / 1e6,
-    }
-    # stats["Task startup time"] = (task_startup_time_end - task_startup_time_begin) / 1e6
-    stats["Total startup time (Launch to train)"] = (task_startup_time_end - app_start_time_begin) / 1e6
-    stats["Environment step"] = {
-        "Environment Step time": step_times.tolist(),
-        "FPS": fps.tolist(),
-        "Effective FPS": (fps * env.num_envs).tolist(),
-        "Environment Step time (min)": step_times.min(),
-        "Environment Step time (max)": step_times.max(),
-        "Environment Step time (mean)": step_times.mean(),
-        "FPS (min)": fps.min(),
-        "FPS (max)": fps.max(),
-        "FPS (mean)": fps.mean(),
-        "Effective FPS (min)": effective_fps.min(),
-        "Effective FPS (max)": effective_fps.max(),
-        "Effective FPS (mean)": effective_fps.mean(),
+    # prepare step timing dict
+    environment_step_times = {
+        "Environment step times": step_times.tolist(),
+        "Environment step FPS": fps.tolist(),
+        "Environment step effective FPS": effective_fps.tolist(),
     }
 
-    print(json.dumps(stats, indent=4))
+    log_app_start_time(benchmark, (app_start_time_end - app_start_time_begin) / 1e6)
+    log_python_imports_time(benchmark, (imports_time_end - imports_time_begin) / 1e6)
+    log_task_start_time(benchmark, (task_startup_time_end - task_startup_time_begin) / 1e6)
+    log_scene_creation_time(benchmark, env.unwrapped.scene_creation_time * 1000)
+    log_simulation_start_time(benchmark, env.unwrapped.simulation_start_time * 1000)
+    log_runtime_step_times(benchmark, environment_step_times, compute_stats=True)
+
+    # stats = dict()
+    # stats["App launch time"] = (app_start_time_end - app_start_time_begin) / 1e6
+    # stats["Python imports time"] = (imports_time_end - imports_time_begin) / 1e6
+    # stats["Task startup time"] = {
+    #     "Total task startup": (task_startup_time_end - task_startup_time_begin) / 1e6,
+    #     # "scene_creation_time": env.scene_creation_time * 1000,
+    #     # "simulation_start_time": env.simulation_start_time * 1000,
+    #     "reset_time": (reset_time_end - task_startup_time_end) / 1e6,
+    # }
+    # # stats["Task startup time"] = (task_startup_time_end - task_startup_time_begin) / 1e6
+    # stats["Total startup time (Launch to train)"] = (task_startup_time_end - app_start_time_begin) / 1e6
+    # stats["Environment step"] = {
+    #     "Environment Step time": step_times.tolist(),
+    #     "FPS": fps.tolist(),
+    #     "Effective FPS": (fps * env.num_envs).tolist(),
+    #     "Environment Step time (min)": step_times.min(),
+    #     "Environment Step time (max)": step_times.max(),
+    #     "Environment Step time (mean)": step_times.mean(),
+    #     "FPS (min)": fps.min(),
+    #     "FPS (max)": fps.max(),
+    #     "FPS (mean)": fps.mean(),
+    #     "Effective FPS (min)": effective_fps.min(),
+    #     "Effective FPS (max)": effective_fps.max(),
+    #     "Effective FPS (mean)": effective_fps.mean(),
+    # }
+
+    # print(json.dumps(stats, indent=4))
 
     # close the simulator
     env.close()

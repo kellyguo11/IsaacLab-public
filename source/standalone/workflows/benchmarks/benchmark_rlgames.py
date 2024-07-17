@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Script to train RL agent with RL-Games."""
+"""Script to benchmark RL agent with RL-Games."""
 
 """Launch Isaac Sim Simulator first."""
 
@@ -28,11 +28,11 @@ parser.add_argument("--seed", type=int, default=None, help="Seed used for the en
 parser.add_argument(
     "--distributed", action="store_true", default=False, help="Run training with multiple GPUs or nodes."
 )
-parser.add_argument("--max_iterations", type=int, default=None, help="RL Policy training iterations.")
+parser.add_argument("--max_iterations", type=int, default=10, help="RL Policy training iterations.")
 parser.add_argument(
     "--benchmark_backend",
     type=str,
-    default="JSONFileMetrics",
+    default="OsmoKPIFile",
     choices=["LocalLogMetrics", "JSONFileMetrics", "OsmoKPIFile"],
     help="Benchmarking backend options, defaults OsmoKPIFile",
 )
@@ -86,6 +86,13 @@ from omni.isaac.lab_tasks.utils.wrappers.rl_games import RlGamesGpuEnv, RlGamesV
 
 imports_time_end = time.perf_counter_ns()
 
+from source.standalone.workflows.benchmarks.utils import *
+
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32 = True
+torch.backends.cudnn.deterministic = False
+torch.backends.cudnn.benchmark = False
+
 
 # Create the benchmark
 benchmark = BaseIsaacBenchmark(
@@ -100,21 +107,6 @@ benchmark = BaseIsaacBenchmark(
     },
     backend_type=args_cli.benchmark_backend,
 )
-
-
-def _parse_tf_logs(log):
-    from tensorboard.backend.event_processing import event_accumulator
-
-    log_data = {}
-    ea = event_accumulator.EventAccumulator(log)
-    ea.Reload()
-    tags = ea.Tags()["scalars"]
-    for tag in tags:
-        log_data[tag] = []
-        for event in ea.Scalars(tag):
-            log_data[tag].append(event.value)
-
-    return log_data
 
 
 def main():
@@ -219,24 +211,10 @@ def main():
 
     # parse tensorboard file stats
     tensorboard_log_dir = os.path.join(log_root_path, log_dir, "summaries")
-    # search log directory for latest log file
-    list_of_files = glob.glob(f"{tensorboard_log_dir}/*")  # * means all if need specific format then *.csv
-    latest_file = max(list_of_files, key=os.path.getctime)
-    log_data = _parse_tf_logs(latest_file)
+    log_data = parse_tf_logs(tensorboard_log_dir)
 
-    # prepare stats for output
-    stats = dict()
-
-    stats["App launch time"] = (app_start_time_end - app_start_time_begin) / 1e6
-    stats["Python imports time"] = (imports_time_end - imports_time_begin) / 1e6
-    stats["Task startup time"] = {
-        "Total task startup": (task_startup_time_end - task_startup_time_begin) / 1e6,
-        "scene_creation_time": env.unwrapped.scene_creation_time * 1000,
-        "simulation_start_time": env.unwrapped.simulation_start_time * 1000,
-    }
-    stats["Total startup time (Launch to train)"] = (task_startup_time_end - app_start_time_begin) / 1e6
-
-    stats["Train Runtime Performance"] = {
+    # prepare RL timing dict
+    rl_training_times = {
         "Environment only step time": log_data["performance/step_time"],
         "Environment + Inference step time": log_data["performance/step_inference_time"],
         "Environment + Inference + Policy update time": log_data["performance/rl_update_time"],
@@ -245,22 +223,46 @@ def main():
         "Environment + Inference + Policy update FPS": log_data["performance/step_inference_rl_update_fps"],
     }
 
-    stats["Train Runtime Performance Summary"] = {}
-    for k, v in stats["Train Runtime Performance"].items():
-        stats["Train Runtime Performance Summary"][f"{k} (min)"] = min(stats["Train Runtime Performance"][k])
-        stats["Train Runtime Performance Summary"][f"{k} (max)"] = max(stats["Train Runtime Performance"][k])
-        stats["Train Runtime Performance Summary"][f"{k} (mean)"] = np.array(
-            stats["Train Runtime Performance"][k]
-        ).mean()
+    # log additional metrics to benchmark services
+    log_app_start_time(benchmark, (app_start_time_end - app_start_time_begin) / 1e6)
+    log_python_imports_time(benchmark, (imports_time_end - imports_time_begin) / 1e6)
+    log_task_start_time(benchmark, (task_startup_time_end - task_startup_time_begin) / 1e6)
+    log_scene_creation_time(benchmark, env.unwrapped.scene_creation_time * 1000)
+    log_simulation_start_time(benchmark, env.unwrapped.simulation_start_time * 1000)
+    log_runtime_step_times(benchmark, rl_training_times, compute_stats=True)
+    log_rl_policy_rewards(benchmark, log_data["rewards/iter"])
+    log_rl_policy_episode_lengths(benchmark, log_data["episode_lengths/iter"])
 
-    stats["Train Policy Performance"] = {
-        "Rewards per iteration": log_data["rewards/iter"],
-        "Episode lengths per iteration": log_data["episode_lengths/iter"],
-        "Max reward": max(log_data["rewards/iter"]),
-        "Max episode length": max(log_data["episode_lengths/iter"]),
-    }
+    # # prepare stats for output
+    # stats = dict()
 
-    print(json.dumps(stats, indent=4))
+    # stats["App launch time"] = (app_start_time_end - app_start_time_begin) / 1e6
+    # stats["Python imports time"] = (imports_time_end - imports_time_begin) / 1e6
+    # stats["Task startup time"] = {
+    #     "Total task startup": (task_startup_time_end - task_startup_time_begin) / 1e6,
+    #     "scene_creation_time": env.unwrapped.scene_creation_time * 1000,
+    #     "simulation_start_time": env.unwrapped.simulation_start_time * 1000,
+    # }
+    # stats["Total startup time (Launch to train)"] = (task_startup_time_end - app_start_time_begin) / 1e6
+
+    
+
+    # stats["Train Runtime Performance Summary"] = {}
+    # for k, v in stats["Train Runtime Performance"].items():
+    #     stats["Train Runtime Performance Summary"][f"{k} (min)"] = min(stats["Train Runtime Performance"][k])
+    #     stats["Train Runtime Performance Summary"][f"{k} (max)"] = max(stats["Train Runtime Performance"][k])
+    #     stats["Train Runtime Performance Summary"][f"{k} (mean)"] = np.array(
+    #         stats["Train Runtime Performance"][k]
+    #     ).mean()
+
+    # stats["Train Policy Performance"] = {
+    #     "Rewards per iteration": log_data["rewards/iter"],
+    #     "Episode lengths per iteration": log_data["episode_lengths/iter"],
+    #     "Max reward": max(log_data["rewards/iter"]),
+    #     "Max episode length": max(log_data["episode_lengths/iter"]),
+    # }
+
+    # print(json.dumps(stats, indent=4))
 
 
 if __name__ == "__main__":
