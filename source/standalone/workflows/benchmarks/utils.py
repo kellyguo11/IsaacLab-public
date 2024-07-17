@@ -62,7 +62,7 @@ def log_python_imports_time(benchmark: BaseIsaacBenchmark, value: float):
 
 
 def log_task_start_time(benchmark: BaseIsaacBenchmark, value: float):
-    measurement = SingleMeasurement(name="Total Task Start Time", value=value, unit="ms")
+    measurement = SingleMeasurement(name="Task Creation and Start Time", value=value, unit="ms")
     benchmark.store_custom_measurement("startup", measurement)
 
 
@@ -73,6 +73,11 @@ def log_scene_creation_time(benchmark: BaseIsaacBenchmark, value: float):
 
 def log_simulation_start_time(benchmark: BaseIsaacBenchmark, value: float):
     measurement = SingleMeasurement(name="Simulation Start Time", value=value, unit="ms")
+    benchmark.store_custom_measurement("startup", measurement)
+
+
+def log_total_start_time(benchmark: BaseIsaacBenchmark, value: float):
+    measurement = SingleMeasurement(name="Total Start Time (Launch to Train)", value=value, unit="ms")
     benchmark.store_custom_measurement("startup", measurement)
 
 

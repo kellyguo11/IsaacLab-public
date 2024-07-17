@@ -67,6 +67,7 @@ from source.standalone.workflows.benchmarks.utils import (
     log_scene_creation_time,
     log_simulation_start_time,
     log_task_start_time,
+    log_total_start_time,
 )
 
 imports_time_begin = time.perf_counter_ns()
@@ -130,7 +131,7 @@ def main():
 
     env.reset()
 
-    benchmark.set_phase("benchmark")
+    benchmark.set_phase("sim_runtime")
 
     # counter for number of frames to run for
     num_frames = 0
@@ -175,6 +176,7 @@ def main():
     log_task_start_time(benchmark, (task_startup_time_end - task_startup_time_begin) / 1e6)
     log_scene_creation_time(benchmark, env.unwrapped.scene_creation_time * 1000)
     log_simulation_start_time(benchmark, env.unwrapped.simulation_start_time * 1000)
+    log_total_start_time(benchmark, (task_startup_time_end - app_start_time_begin) / 1e6)
     log_runtime_step_times(benchmark, environment_step_times, compute_stats=True)
 
     benchmark.stop()
