@@ -181,7 +181,6 @@ def main():
     runner.learn(num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True)
 
     benchmark.store_measurements()
-    benchmark.stop()
 
     # parse tensorboard file stats
     log_data = parse_tf_logs(log_dir)
@@ -202,6 +201,8 @@ def main():
     log_runtime_step_times(benchmark, rl_training_times, compute_stats=True)
     log_rl_policy_rewards(benchmark, log_data["Train/mean_reward"])
     log_rl_policy_episode_lengths(benchmark, log_data["Train/mean_episode_length"])
+
+    benchmark.stop()
 
     # close the simulator
     env.close()

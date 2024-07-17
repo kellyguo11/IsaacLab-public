@@ -157,7 +157,6 @@ def main():
         break
 
     benchmark.store_measurements()
-    benchmark.stop()
 
     # compute stats
     step_times = np.array(step_times) / 1e6  # ns to ms
@@ -177,6 +176,8 @@ def main():
     log_scene_creation_time(benchmark, env.unwrapped.scene_creation_time * 1000)
     log_simulation_start_time(benchmark, env.unwrapped.simulation_start_time * 1000)
     log_runtime_step_times(benchmark, environment_step_times, compute_stats=True)
+
+    benchmark.stop()
 
     # close the simulator
     env.close()

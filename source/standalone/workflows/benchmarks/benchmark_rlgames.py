@@ -209,7 +209,6 @@ def main():
     runner.run({"train": True, "play": False, "sigma": None})
 
     benchmark.store_measurements()
-    benchmark.stop()
 
     # parse tensorboard file stats
     tensorboard_log_dir = os.path.join(log_root_path, log_dir, "summaries")
@@ -234,6 +233,8 @@ def main():
     log_runtime_step_times(benchmark, rl_training_times, compute_stats=True)
     log_rl_policy_rewards(benchmark, log_data["rewards/iter"])
     log_rl_policy_episode_lengths(benchmark, log_data["episode_lengths/iter"])
+
+    benchmark.stop()
 
     # close the simulator
     env.close()
