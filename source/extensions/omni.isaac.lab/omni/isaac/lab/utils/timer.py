@@ -151,15 +151,19 @@ class Timer(ContextDecorator):
     """
 
     @staticmethod
-    def get_timer_info(name: str | None = None) -> float | None:
+    def get_timer_info(name: str) -> float:
         """Retrieves the time logged in the global dictionary
             based on name.
 
         Args:
             name: Name of the the entry to be retrieved.
 
+        Raises:
+            TimerError: If name doesn't exist in the log.
+
         Returns:
-            A float containing the time logged if the name exists,
-            None otherwise.
+            A float containing the time logged if the name exists.
         """
-        return Timer.timing_info.get(name)
+        if name not in Timer.timing_info:
+            raise TimerError(f"Timer {name} does not exist")
+        return Timer.get(name)
