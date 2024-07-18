@@ -166,4 +166,4 @@ class Timer(ContextDecorator):
         """
         if name not in Timer.timing_info:
             raise TimerError(f"Timer {name} does not exist")
-        return Timer.get(name)
+        return Timer.timing_info.get(name)
