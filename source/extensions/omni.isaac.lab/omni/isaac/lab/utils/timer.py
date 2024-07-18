@@ -162,4 +162,4 @@ class Timer(ContextDecorator):
             A float containing the time logged if the name exists,
             None otherwise.
         """
-        return Timer.timing_info.get(name, None)
+        return Timer.timing_info.get(name)
