@@ -45,7 +45,7 @@ cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 # to ensure kit args don't break the benchmark arg parsing
-args_cli, unknown = parser.parse_known_args()
+args_cli, _ = parser.parse_known_args()
 
 app_start_time_begin = time.perf_counter_ns()
 
