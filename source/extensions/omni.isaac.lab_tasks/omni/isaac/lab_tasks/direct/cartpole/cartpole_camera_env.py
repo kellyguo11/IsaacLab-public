@@ -45,7 +45,7 @@ class CartpoleRGBCameraEnvCfg(DirectRLEnvCfg):
     tiled_camera: TiledCameraCfg = TiledCameraCfg(
         prim_path="/World/envs/env_.*/Camera",
         offset=TiledCameraCfg.OffsetCfg(pos=(-7.0, 0.0, 3.0), rot=(0.9945, 0.0, 0.1045, 0.0), convention="world"),
-        data_types=["rgb"],
+        data_types=["rgba"],
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
         ),
@@ -170,9 +170,12 @@ class CartpoleCameraEnv(DirectRLEnv):
         self._cartpole.set_joint_effort_target(self.actions, joint_ids=self._cart_dof_idx)
 
     def _get_observations(self) -> dict:
-        data_type = "rgb" if "rgb" in self.cfg.tiled_camera.data_types else "depth"
-        # self._update_buffers_impl()
-        observations = {"policy": self._tiled_camera.data.output[data_type].clone()}
+        data_type = "rgba" if "rgba" in self.cfg.tiled_camera.data_types else "depth"
+        if "rgba" in self.cfg.tiled_camera.data_types:
+            camera_data = self._tiled_camera.data.output[data_type][..., :3]
+        elif "depth" in self.cfg.tiled_camera.data_types:
+            camera_data = self._tiled_camera.data.output[data_type]
+        observations = {"policy": camera_data.clone()}
 
         if self.cfg.write_image_to_file:
             save_images_to_file(observations["policy"], f"cartpole_{data_type}.png")
