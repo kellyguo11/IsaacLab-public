@@ -171,7 +171,6 @@ class CartpoleCameraEnv(DirectRLEnv):
 
     def _get_observations(self) -> dict:
         data_type = "rgb" if "rgb" in self.cfg.tiled_camera.data_types else "depth"
-        # self._update_buffers_impl()
         observations = {"policy": self._tiled_camera.data.output[data_type].clone()}
 
         if self.cfg.write_image_to_file:
