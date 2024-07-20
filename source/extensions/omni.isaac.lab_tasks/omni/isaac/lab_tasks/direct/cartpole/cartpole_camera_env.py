@@ -19,7 +19,6 @@ from omni.isaac.lab.envs import DirectRLEnv, DirectRLEnvCfg, ViewerCfg
 from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.sensors import TiledCamera, TiledCameraCfg, save_images_to_file
 from omni.isaac.lab.sim import SimulationCfg
-from omni.isaac.lab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.math import sample_uniform
 
@@ -149,27 +148,13 @@ class CartpoleCameraEnv(DirectRLEnv):
         self.actions = torch.zeros(self.num_envs, self.num_actions, device=self.sim.device)
 
     def _setup_scene(self):
-        
         """Setup the scene with the cartpole and camera."""
         self._cartpole = Articulation(self.cfg.robot_cfg)
         self._tiled_camera = TiledCamera(self.cfg.tiled_camera)
 
-        # from omni.isaac.lab.sensors.camera.utils import convert_orientation_convention
-        # rot = torch.tensor(self.cfg.tiled_camera.offset.rot, dtype=torch.float32).unsqueeze(0)
-        # rot_offset = convert_orientation_convention(rot, origin=self.cfg.tiled_camera.offset.convention, target="opengl")
-        # rot_offset = rot_offset.squeeze(0).numpy()
-        # self.cfg.tiled_camera.spawn.func(
-        #     self.cfg.tiled_camera.prim_path, self.cfg.tiled_camera.spawn, translation=self.cfg.tiled_camera.offset.pos, orientation=rot_offset
-        # )
-
-        # # add ground plane
-        # spawn_ground_plane(prim_path="/World/ground", cfg=GroundPlaneCfg(size=(500, 500)))
         # clone, filter, and replicate
         self.scene.clone_environments(copy_from_source=False)
         self.scene.filter_collisions(global_prim_paths=[])
-
-        # camera_paths = [f"/World/envs/env_{i}/Camera" for i in range(self.num_envs)]
-        # self.create_tiled_sensor(cameras=camera_paths, tile_resolution=(self.cfg.tiled_camera.width, self.cfg.tiled_camera.height))
 
         # add articultion and sensors to scene
         self.scene.articulations["cartpole"] = self._cartpole
