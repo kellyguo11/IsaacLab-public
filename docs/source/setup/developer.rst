@@ -11,6 +11,7 @@ using VSCode.
 Setting up Visual Studio Code
 -----------------------------
 
+The following is only applicable for Isaac Sim installed via the Omniverse Launcher.
 The ``Isaac Lab`` repository includes the VSCode settings to easily allow setting
 up your development environment. These are included in the ``.vscode`` directory
 and include the following files:
@@ -40,17 +41,16 @@ To setup the IDE, please follow these instructions:
       :align: center
       :alt: VSCode Tasks
 
-If everything executes correctly, it should create a file
-``.python.env`` in the ``.vscode`` directory. The file contains the python
-paths to all the extensions provided by Isaac Sim and Omniverse. This helps
-in indexing all the python modules for intelligent suggestions while writing
-code.
+If everything executes correctly, it should create the following files:
+
+* ``.vscode/launch.json``: Contains the launch configurations for debugging python code.
+* ``.vscode/settings.json``: Contains the settings for the python interpreter and the python environment.
 
 For more information on VSCode support for Omniverse, please refer to the
 following links:
 
 * `Isaac Sim VSCode support <https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/manual_standalone_python.html#isaac-sim-python-vscode>`__
-* `Debugging with VSCode <https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/tutorial_advanced_python_debugging.html>`__
+* `Debugging with VSCode <https://docs.omniverse.nvidia.com/isaacsim/latest/advanced_tutorials/tutorial_advanced_python_debugging.html>`__
 
 
 Configuring the python interpreter
@@ -63,8 +63,7 @@ python executable provided by Omniverse. This is specified in the
 .. code-block:: json
 
    {
-      "python.defaultInterpreterPath": "${workspaceFolder}/_isaac_sim/kit/python/bin/python3",
-      "python.envFile": "${workspaceFolder}/.vscode/.python.env",
+      "python.defaultInterpreterPath": "${workspaceFolder}/_isaac_sim/python.sh",
    }
 
 If you want to use a different python interpreter (for instance, from your conda environment),
@@ -93,6 +92,7 @@ The ``Isaac Lab`` repository is structured as follows:
    ├── source
    │   ├── extensions
    │   │   ├── omni.isaac.lab
+   │   │   ├── omni.isaac.lab_assets
    │   │   └── omni.isaac.lab_tasks
    │   ├── standalone
    │   │   ├── demos
@@ -194,11 +194,11 @@ Extension Dependency Management
 Certain extensions may have dependencies which need to be installed before the extension can be run.
 While Python dependencies can be expressed via the ``INSTALL_REQUIRES`` array in ``setup.py``, we need
 a separate installation pipeline to handle non-Python dependencies. We have therefore created
-an additional setup procedure, ``./isaaclab.sh --install-deps {dep_type}``, which scans the ``extension.toml``
-file of the directories under ``source/extensions`` for ``apt`` and ``rosdep`` dependencies.
+an additional setup procedure, ``python tools/install_deps.py {dep_type} {extensions_dir}``, which scans the ``extension.toml``
+file of the directories under the ``{extensions_dir}`` (such as ``${ISAACLAB_PATH}/source/extensions``) for ``apt`` and ``rosdep`` dependencies.
 
 This example ``extension.toml`` has both ``apt_deps`` and ``ros_ws`` specified, so both
-``apt`` and ``rosdep`` packages will be installed if ``./isaaclab.sh --install-deps all``
+``apt`` and ``rosdep`` packages will be installed if ``python tools/install_deps.py all ${ISAACLAB_PATH}/source/extensions``
 is passed:
 
 .. code-block:: toml
