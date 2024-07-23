@@ -180,7 +180,7 @@ class EventManager(ManagerBase):
                         " to be passed to the event manager."
                     )
                 self._reset_mode_time_until_next_reset[index] -= dt
-                if env_ids is not None and len(env_ids) > 0 and term_cfg.min_frequency > 0:
+                if env_ids is not None and len(env_ids) > 0:
                     time_left = self._reset_mode_time_until_next_reset[index]
                     env_ids = env_ids[time_left[env_ids] <= 0.0]
                     if len(env_ids) > 0:
