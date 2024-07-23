@@ -38,9 +38,6 @@ class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
         ),
         physx=PhysxCfg(
             bounce_threshold_velocity=0.2,
-            gpu_found_lost_pairs_capacity=2**18,
-            gpu_found_lost_aggregate_pairs_capacity=2**12,
-            gpu_total_aggregate_pairs_capacity=2**12,
         ),
     )
 
@@ -49,7 +46,7 @@ class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
         prim_path="/World/envs/env_.*/Camera",
         offset=TiledCameraCfg.OffsetCfg(pos=(0.0, -0.2, 2.0), rot=(0.0, 0.0, 0.0, -1.0), convention="opengl"),
         # offset=TiledCameraCfg.OffsetCfg(pos=(-2.0, 0.0, 0.75), rot=(-0.5, -0.5, 0.5, 0.5), convention="opengl"),
-        data_types=["rgb"],
+        data_types=["rgba"],
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
         ),
@@ -77,9 +74,6 @@ class ShadowHandRGBDCameraEnvCfg(ShadowHandEnvCfg):
         ),
         physx=PhysxCfg(
             bounce_threshold_velocity=0.2,
-            gpu_found_lost_pairs_capacity=2**18,
-            gpu_found_lost_aggregate_pairs_capacity=2**12,
-            gpu_total_aggregate_pairs_capacity=2**12,
         ),
     )
 
@@ -88,11 +82,11 @@ class ShadowHandRGBDCameraEnvCfg(ShadowHandEnvCfg):
         prim_path="/World/envs/env_.*/Camera",
         offset=TiledCameraCfg.OffsetCfg(pos=(0.0, -0.2, 2.0), rot=(0.0, 0.0, 0.0, -1.0), convention="opengl"),
         # offset=TiledCameraCfg.OffsetCfg(pos=(-2.0, 0.0, 0.75), rot=(-0.5, -0.5, 0.5, 0.5), convention="opengl"),
-        data_types=["rgb", "depth"],
+        data_types=["rgba", "depth"],
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
         ),
-        width=240,
+        width=320,
         height=240,
     )
     write_image_to_file = False
@@ -116,9 +110,6 @@ class ShadowHandDepthCameraEnvCfg(ShadowHandEnvCfg):
         ),
         physx=PhysxCfg(
             bounce_threshold_velocity=0.2,
-            gpu_found_lost_pairs_capacity=2**18,
-            gpu_found_lost_aggregate_pairs_capacity=2**12,
-            gpu_total_aggregate_pairs_capacity=2**12,
         ),
     )
 
@@ -193,8 +184,6 @@ class ShadowHandCameraEnv(ShadowHandEnv):
         self.hand = Articulation(self.cfg.robot_cfg)
         self.object = RigidObject(self.cfg.object_cfg)
         self._tiled_camera = TiledCamera(self.cfg.tiled_camera)
-        # add ground plane
-        spawn_ground_plane(prim_path="/World/ground", cfg=GroundPlaneCfg())
         # clone and replicate (no need to filter for this environment)
         self.scene.clone_environments(copy_from_source=False)
         # add articultion to scene - we must register to scene to randomize with EventManager
@@ -212,33 +201,30 @@ class ShadowHandCameraEnv(ShadowHandEnv):
             ]
             states = self.compute_full_state()
 
-        # if self.cfg.obs_type == "openai":
-        #     obs = self.compute_reduced_observations()
-        # elif self.cfg.obs_type == "full":
-        #     obs = self.compute_full_observations()
-        # else:
-        #     print("Unknown observations type!")
-
         if self.cfg.num_channels == 1:
             # depth
             data_type = "depth"
-            camera_data = self._tiled_camera.data.output[data_type].clone() / 2.5
+            camera_data = self._tiled_camera.data.output[data_type][:, :, :3].clone()
+            camera_data[camera_data==float("inf")] = 0
+            camera_data /= 2.0
             self._save_images("depth", camera_data)
             observations = {"policy": camera_data}
             if self.cfg.asymmetric_obs:
                 observations = {"policy": camera_data, "critic": states}
         elif self.cfg.num_channels == 3:
             # RGB
-            data_type = "rgb"
-            camera_data = self._tiled_camera.data.output[data_type].clone()
+            data_type = "rgba"
+            rgb_data = self._tiled_camera.data.output[data_type][:, :, :3].clone()
             self._save_images("rgb", camera_data)
             observations = {"policy": camera_data}
             if self.cfg.asymmetric_obs:
                 observations = {"policy": camera_data, "critic": states}
         elif self.cfg.num_channels == 4:
             # RGB+D
-            depth_data = self._tiled_camera.data.output["depth"].clone() / 2.5
-            rgb_data = self._tiled_camera.data.output["rgb"].clone()
+            depth_data = self._tiled_camera.data.output["depth"].clone()
+            depth_data[depth_data==float("inf")] = 0
+            depth_data /= 2.0
+            rgb_data = self._tiled_camera.data.output["rgba"][..., :3].clone()
             self._save_images("rgb", rgb_data)
             self._save_images("depth", depth_data)
             camera_data = torch.cat((rgb_data, depth_data), dim=-1)
