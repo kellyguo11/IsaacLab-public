@@ -16,7 +16,7 @@ params:
 
   # doesn't have this fine grained control but made it close
   network:
-    name: actor_critic
+    name: resnet_actor_critic
     separate: False
     space:
       continuous:
@@ -36,19 +36,7 @@ params:
           name: default
       regularizer:
         name: None
-      convs:
-        - filters: 32
-          kernel_size: 8
-          strides: 4
-          padding: 0
-        - filters: 64
-          kernel_size: 4
-          strides: 2
-          padding: 0
-        - filters: 64
-          kernel_size: 3
-          strides: 1
-          padding: 0
+      conv_depths: [16, 32, 32]
 
     mlp:
       units: [512]
@@ -60,7 +48,7 @@ params:
   load_path: '' # path to the checkpoint to load
 
   config:
-    name: shadow_hand
+    name: shadow_hand_rgb
     env_name: rlgpu
     device: 'cuda:0'
     device_name: 'cuda:0'
@@ -88,7 +76,7 @@ params:
     entropy_coef: 0.0
     truncate_grads: True
     e_clip: 0.2
-    horizon_length: 128
+    horizon_length: 64
     minibatch_size: 2048 #32768
     mini_epochs: 4
     critic_coef: 2
