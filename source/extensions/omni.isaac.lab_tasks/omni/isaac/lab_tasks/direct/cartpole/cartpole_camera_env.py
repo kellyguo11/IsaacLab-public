@@ -30,7 +30,7 @@ class CartpoleRGBCameraEnvCfg(DirectRLEnvCfg):
     episode_length_s = 5.0
     action_scale = 100.0  # [N]
     num_actions = 1
-    num_channels = 4
+    num_channels = 3
     num_states = 0
 
     # simulation
