@@ -167,13 +167,6 @@ class DirectRLEnv(gym.Env):
         self.reset_time_outs = torch.zeros_like(self.reset_terminated)
         self.reset_buf = torch.zeros(self.num_envs, dtype=torch.bool, device=self.sim.device)
         self.actions = torch.zeros(self.num_envs, self.cfg.num_actions, device=self.sim.device)
-<<<<<<< HEAD
-        self.time_since_last_reset_randomization_s = (
-            torch.zeros(self.num_envs, device=self.device, dtype=torch.float) + self.cfg.min_randomization_freq_s
-        )
-=======
-
->>>>>>> 068cca2ae9f3542a2aca2412234cab5adf0b18d3
         # setup the action and observation spaces for Gym
         self._configure_gym_env_spaces()
 
@@ -293,12 +286,8 @@ class DirectRLEnv(gym.Env):
         """
         # add action noise
         if self.cfg.action_noise_model:
-<<<<<<< HEAD
             action = self._action_noise_model.apply(action)
 
-=======
-            action = self._action_noise_model.apply(action.clone())
->>>>>>> 068cca2ae9f3542a2aca2412234cab5adf0b18d3
         # process actions
         self._pre_physics_step(action)
 
@@ -529,19 +518,9 @@ class DirectRLEnv(gym.Env):
         # apply events such as randomization for environments that need a reset
         if self.cfg.events:
             if "reset" in self.event_manager.available_modes:
-<<<<<<< HEAD
-                self.time_since_last_reset_randomization_s += self.step_dt
-                env_ids = env_ids[
-                    self.time_since_last_reset_randomization_s[env_ids] >= self.cfg.min_randomization_freq_s
-                ]
-                self.time_since_last_reset_randomization_s[env_ids] = 0
-                if len(env_ids) > 0:
-                    self.event_manager.apply(env_ids=env_ids, mode="reset", dt=self.step_dt)
-=======
                 self.event_manager.apply(env_ids=env_ids, mode="reset")
 
         # reset noise models
->>>>>>> 068cca2ae9f3542a2aca2412234cab5adf0b18d3
         if self.cfg.action_noise_model:
             self._action_noise_model.reset(env_ids)
         if self.cfg.observation_noise_model:
