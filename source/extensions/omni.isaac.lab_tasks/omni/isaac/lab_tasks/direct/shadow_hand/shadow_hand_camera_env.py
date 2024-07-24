@@ -33,10 +33,11 @@ class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
     tiled_camera: TiledCameraCfg = TiledCameraCfg(
         prim_path="/World/envs/env_.*/Camera",
         offset=TiledCameraCfg.OffsetCfg(pos=(0.0, -0.27, 1.5), rot=(0.0, 0.0, 0.0, -1.0), convention="opengl"),
-        # offset=TiledCameraCfg.OffsetCfg(pos=(-2.0, 0.0, 0.75), rot=(-0.5, -0.5, 0.5, 0.5), convention="opengl"),
+        # offset=TiledCameraCfg.OffsetCfg(pos=(-0.1, -0.9, 0.92), rot=(0.866, 0.5, 0.0, 0.0), convention="opengl"),
+        # offset=TiledCameraCfg.OffsetCfg(pos=(-0.9, -0.3, 0.6), rot=(-0.5, -0.5, 0.5, 0.5), convention="opengl"),
         data_types=["rgba"],
         spawn=sim_utils.PinholeCameraCfg(
-            focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
+            focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 5.0)
         ),
         width=160,
         height=120,
@@ -56,7 +57,7 @@ class ShadowHandRGBDCameraEnvCfg(ShadowHandEnvCfg):
     # camera
     tiled_camera: TiledCameraCfg = TiledCameraCfg(
         prim_path="/World/envs/env_.*/Camera",
-        offset=TiledCameraCfg.OffsetCfg(pos=(0.0, -0.2, 2.0), rot=(0.0, 0.0, 0.0, -1.0), convention="opengl"),
+        offset=TiledCameraCfg.OffsetCfg(pos=(-0.2, -0.2, 2.0), rot=(0.0, 0.0, 0.0, -1.0), convention="opengl"),
         # offset=TiledCameraCfg.OffsetCfg(pos=(-2.0, 0.0, 0.75), rot=(-0.5, -0.5, 0.5, 0.5), convention="opengl"),
         data_types=["rgba", "depth"],
         spawn=sim_utils.PinholeCameraCfg(
@@ -170,7 +171,7 @@ class ShadowHandCameraEnv(ShadowHandEnv):
             data_type = "depth"
             camera_data = self._tiled_camera.data.output[data_type].clone()
             camera_data[camera_data==float("inf")] = 0
-            camera_data /= 2.0
+            camera_data /= 5.0
             self._save_images("depth", camera_data)
             observations = {"policy": camera_data}
             if self.cfg.asymmetric_obs:
@@ -178,7 +179,7 @@ class ShadowHandCameraEnv(ShadowHandEnv):
         elif self.cfg.num_channels == 3:
             # RGB
             data_type = "rgba"
-            rgb_data = self._tiled_camera.data.output[data_type][..., :3].clone()
+            rgb_data = 1 - self._tiled_camera.data.output[data_type][..., :3].clone()
             self._save_images("rgb", rgb_data)
             observations = {"policy": rgb_data}
             if self.cfg.asymmetric_obs:
@@ -188,7 +189,7 @@ class ShadowHandCameraEnv(ShadowHandEnv):
             depth_data = self._tiled_camera.data.output["depth"].clone()
             depth_data[depth_data==float("inf")] = 0
             depth_data /= 2.0
-            rgb_data = self._tiled_camera.data.output["rgba"][..., :3].clone()
+            rgb_data = 1 - self._tiled_camera.data.output["rgba"][..., :3].clone()
             self._save_images("rgb", rgb_data)
             self._save_images("depth", depth_data)
             camera_data = torch.cat((rgb_data, depth_data), dim=-1)

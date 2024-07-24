@@ -83,7 +83,6 @@ def reshape_tiled_image(
     image_width: int,
     num_channels: int,
     num_tiles_x: int,
-    offset: int,
 ):
     """Reshapes a tiled image into a batch of images.
 
@@ -98,7 +97,6 @@ def reshape_tiled_image(
         image_height: The height of the image.
         num_channels: The number of channels in the image.
         num_tiles_x: The number of tiles in x-direction.
-        offset: The offset in the image buffer. This is used when multiple image types are concatenated in the buffer.
     """
     # get the thread id
     camera_id, height_id, width_id = wp.tid()
@@ -108,8 +106,7 @@ def reshape_tiled_image(
     tile_y_id = camera_id // num_tiles_x
     # compute the start index of the pixel in the tiled image buffer
     pixel_start = (
-        offset
-        + num_channels * num_tiles_x * image_width * (image_height * tile_y_id + height_id)
+        num_channels * num_tiles_x * image_width * (image_height * tile_y_id + height_id)
         + num_channels * tile_x_id * image_width
         + num_channels * width_id
     )

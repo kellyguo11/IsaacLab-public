@@ -1,18 +1,13 @@
 Changelog
 ---------
 
-0.19.5 (2024-07-17)
+0.20.0 (2024-07-24)
 ~~~~~~~~~~~~~~~~~~~
 
 Changed
 ^^^^^^^
 
-* Performance improvements for material randomization in events.
-
-Added
-^^^^^
-
-* Added minimum randomization frequency for reset mode randomizations.
+* Updated :class:`omni.isaac.lab.sensors.camera.tiled_camera` to latest RTX tiled rendering API.
 
 
 0.19.4 (2024-07-13)
