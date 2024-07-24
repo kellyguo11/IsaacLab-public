@@ -1,6 +1,14 @@
 Changelog
 ---------
 
+0.19.0 (2024-07-24)
+~~~~~~~~~~~~~~~~~~~
+
+Changed
+^^^^^^^
+
+* Updated :class:`omni.isaac.lab.sensors.camera.tiled_camera` to latest RTX tiled rendering API.
+
 0.18.6 (2024-07-01)
 ~~~~~~~~~~~~~~~~~~~
 

@@ -205,7 +205,6 @@ class TiledCamera(Camera):
                     wp.from_torch(self._data.output[data_type]),  # zero-copy alias
                     *list(self._data.output[data_type].shape[1:]),  # height, width, num_channels
                     self._tiling_grid_shape()[0],  # num_tiles_x
-                    0,
                 ],
                 device=self.device,
             )
