@@ -108,7 +108,7 @@ class ManagerBasedEnv:
         self._sim_step_counter = 0
 
         # generate scene
-        with Timer("[INFO]: Time taken for scene creation"):
+        with Timer("[INFO]: Time taken for scene creation", "scene_creation"):
             self.scene = InteractiveScene(self.cfg.scene)
         print("[INFO]: Scene manager: ", self.scene)
 
@@ -126,7 +126,7 @@ class ManagerBasedEnv:
         # note: when started in extension mode, first call sim.reset_async() and then initialize the managers
         if builtins.ISAAC_LAUNCHED_FROM_TERMINAL is False:
             print("[INFO]: Starting the simulation. This may take a few seconds. Please wait...")
-            with Timer("[INFO]: Time taken for simulation start"):
+            with Timer("[INFO]: Time taken for simulation start", "simulation_start"):
                 self.sim.reset()
             # add timeline event to load managers
             self.load_managers()
@@ -222,6 +222,12 @@ class ManagerBasedEnv:
         # -- event manager
         self.event_manager = EventManager(self.cfg.events, self)
         print("[INFO] Event Manager: ", self.event_manager)
+
+        # perform events at the start of the simulation
+        # in-case a child implementation creates other managers, the randomization should happen
+        # when all the other managers are created
+        if self.__class__ == ManagerBasedEnv and "startup" in self.event_manager.available_modes:
+            self.event_manager.apply(mode="startup")
 
     """
     Operations - MDP.

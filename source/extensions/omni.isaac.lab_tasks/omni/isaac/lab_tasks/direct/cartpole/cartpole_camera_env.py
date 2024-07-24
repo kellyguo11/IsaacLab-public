@@ -30,7 +30,7 @@ class CartpoleRGBCameraEnvCfg(DirectRLEnvCfg):
     episode_length_s = 5.0
     action_scale = 100.0  # [N]
     num_actions = 1
-    num_channels = 4
+    num_channels = 3
     num_states = 0
 
     # simulation
@@ -44,7 +44,7 @@ class CartpoleRGBCameraEnvCfg(DirectRLEnvCfg):
     # camera
     tiled_camera: TiledCameraCfg = TiledCameraCfg(
         prim_path="/World/envs/env_.*/Camera",
-        offset=TiledCameraCfg.OffsetCfg(pos=(-7.0, 0.0, 3.0), rot=(0.9945, 0.0, 0.1045, 0.0), convention="world"),
+        offset=TiledCameraCfg.OffsetCfg(pos=(-5.0, 0.0, 2.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world"),
         data_types=["rgba"],
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
@@ -78,7 +78,7 @@ class CartpoleDepthCameraEnvCfg(CartpoleRGBCameraEnvCfg):
     # camera
     tiled_camera: TiledCameraCfg = TiledCameraCfg(
         prim_path="/World/envs/env_.*/Camera",
-        offset=TiledCameraCfg.OffsetCfg(pos=(-7.0, 0.0, 3.0), rot=(0.9945, 0.0, 0.1045, 0.0), convention="world"),
+        offset=TiledCameraCfg.OffsetCfg(pos=(-5.0, 0.0, 2.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world"),
         data_types=["depth"],
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
@@ -172,9 +172,10 @@ class CartpoleCameraEnv(DirectRLEnv):
     def _get_observations(self) -> dict:
         data_type = "rgba" if "rgba" in self.cfg.tiled_camera.data_types else "depth"
         if "rgba" in self.cfg.tiled_camera.data_types:
-            camera_data = self._tiled_camera.data.output[data_type][..., :3]
+            camera_data = 1 - self._tiled_camera.data.output[data_type][..., :3]
         elif "depth" in self.cfg.tiled_camera.data_types:
             camera_data = self._tiled_camera.data.output[data_type]
+            camera_data[camera_data == float("inf")] = 0
         observations = {"policy": camera_data.clone()}
 
         if self.cfg.write_image_to_file:
