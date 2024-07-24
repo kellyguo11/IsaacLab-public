@@ -8,6 +8,7 @@ from __future__ import annotations
 import math
 import numpy as np
 import torch
+import warnings
 from collections.abc import Sequence
 from tensordict import TensorDict
 from typing import TYPE_CHECKING, Any
@@ -50,7 +51,7 @@ class TiledCamera(Camera):
     cfg: TiledCameraCfg
     """The configuration parameters."""
 
-    SUPPORTED_TYPES: set[str] = {"rgba", "depth"}
+    SUPPORTED_TYPES: set[str] = {"rgb", "rgba", "depth"}  # RGB only for backwards compatibility
     """The set of sensor types that are supported."""
 
     def __init__(self, cfg: TiledCameraCfg):
@@ -171,7 +172,7 @@ class TiledCamera(Camera):
         self._render_product_paths = [rp.path]
         # Attach the annotator
         self._annotators = dict()
-        if "rgba" in self.cfg.data_types:
+        if "rgba" in self.cfg.data_types or "rgb" in self.cfg.data_types:
             annotator = rep.AnnotatorRegistry.get_annotator("rgb", device=self.device, do_array_copy=False)
             self._annotators["rgba"] = annotator
         if "depth" in self.cfg.data_types:
@@ -211,6 +212,8 @@ class TiledCamera(Camera):
 
             if data_type == "rgba":
                 self._data.output[data_type] /= 255.0
+                if "rgb" in self.cfg.data_types:
+                    self._data.output[data_type] = self._data.output["rgba"].clone()[..., :3]
 
     """
     Private Helpers
@@ -223,6 +226,12 @@ class TiledCamera(Camera):
                 f"The TiledCamera class only supports the following types {TiledCamera.SUPPORTED_TYPES} but the"
                 f" following where provided: {cfg.data_types}"
             )
+
+        # check for deprecation
+        if "rgb" in cfg.data_types:
+            msg = "Tiled Camera data type 'rgb' is deprecated. Please use 'rgba' instead."
+            warnings.warn(msg, DeprecationWarning)
+            carb.log_warn(msg)
 
     def _create_buffers(self):
         """Create buffers for storing data."""
@@ -238,6 +247,13 @@ class TiledCamera(Camera):
         # -- output data
         data_dict = dict()
         if "rgba" in self.cfg.data_types:
+            data_dict["rgba"] = torch.zeros(
+                (self._view.count, self.cfg.height, self.cfg.width, 4), device=self.device
+            ).contiguous()
+        if "rgb" in self.cfg.data_types:
+            data_dict["rgb"] = torch.zeros(
+                (self._view.count, self.cfg.height, self.cfg.width, 3), device=self.device
+            ).contiguous()
             data_dict["rgba"] = torch.zeros(
                 (self._view.count, self.cfg.height, self.cfg.width, 4), device=self.device
             ).contiguous()
