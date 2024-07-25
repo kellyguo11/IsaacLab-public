@@ -176,7 +176,7 @@ class CartpoleCameraEnv(DirectRLEnv):
         elif "depth" in self.cfg.tiled_camera.data_types:
             camera_data = self._tiled_camera.data.output[data_type]
             camera_data[camera_data == float("inf")] = 0
-        observations = {"policy": camera_data.clone()}
+        observations = {"policy": camera_data}
 
         if self.cfg.write_image_to_file:
             save_images_to_file(observations["policy"], f"cartpole_{data_type}.png")

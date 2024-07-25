@@ -213,7 +213,7 @@ class TiledCamera(Camera):
             if data_type == "rgba":
                 self._data.output[data_type] /= 255.0
                 if "rgb" in self.cfg.data_types:
-                    self._data.output[data_type] = self._data.output["rgba"].clone()[..., :3]
+                    self._data.output["rgb"] = self._data.output["rgba"][..., :3]
 
     """
     Private Helpers
