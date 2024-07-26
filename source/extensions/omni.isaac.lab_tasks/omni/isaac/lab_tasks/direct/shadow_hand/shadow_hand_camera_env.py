@@ -38,8 +38,8 @@ class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
         ),
-        width=160,
-        height=120,
+        width=320,
+        height=240,
     )
     write_image_to_file = False
 
