@@ -37,7 +37,8 @@ class TiledCamera(Camera):
 
     The following sensor types are supported:
 
-    - ``"rgba"``: A rendered color image.
+    - ``"rgb"``: A 3-channel rendered color image.
+    - ``"rgba"``: A 4-channel rendered color image.
     - ``"depth"``: An image containing the distance to camera optical center.
 
     .. versionadded:: v1.0.0
