@@ -9,7 +9,6 @@ from __future__ import annotations
 import gymnasium as gym
 import numpy as np
 import torch
-import torchvision.models as models
 from collections.abc import Sequence
 
 import omni.isaac.lab.sim as sim_utils
@@ -33,18 +32,16 @@ class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
     # camera
     tiled_camera: TiledCameraCfg = TiledCameraCfg(
         prim_path="/World/envs/env_.*/Camera",
-        offset=TiledCameraCfg.OffsetCfg(pos=(0.0, -0.25, 1.2), rot=(0.7071, 0., 0.7071, 0.), convention="world"),
-        # offset=TiledCameraCfg.OffsetCfg(pos=(0.0, -0.27, 1.5), rot=(0.0, 0.0, 0.0, -1.0), convention="opengl"),
-        # offset=TiledCameraCfg.OffsetCfg(pos=(-0.1, -0.9, 0.92), rot=(0.866, 0.5, 0.0, 0.0), convention="opengl"),
-        # offset=TiledCameraCfg.OffsetCfg(pos=(-0.9, -0.3, 0.6), rot=(-0.5, -0.5, 0.5, 0.5), convention="opengl"),
+        offset=TiledCameraCfg.OffsetCfg(pos=(0.0, -0.27, 1.5), rot=(0.0, 0.0, 0.0, -1.0), convention="opengl"),
+        # offset=TiledCameraCfg.OffsetCfg(pos=(-2.0, 0.0, 0.75), rot=(-0.5, -0.5, 0.5, 0.5), convention="opengl"),
         data_types=["rgba"],
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
         ),
-        width=224,
-        height=224,
+        width=160,
+        height=120,
     )
-    write_image_to_file = True
+    write_image_to_file = False
 
     # env
     num_channels = 3
@@ -59,7 +56,7 @@ class ShadowHandRGBDCameraEnvCfg(ShadowHandEnvCfg):
     # camera
     tiled_camera: TiledCameraCfg = TiledCameraCfg(
         prim_path="/World/envs/env_.*/Camera",
-        offset=TiledCameraCfg.OffsetCfg(pos=(-0.2, -0.2, 2.0), rot=(0.0, 0.0, 0.0, -1.0), convention="opengl"),
+        offset=TiledCameraCfg.OffsetCfg(pos=(0.0, -0.2, 2.0), rot=(0.0, 0.0, 0.0, -1.0), convention="opengl"),
         # offset=TiledCameraCfg.OffsetCfg(pos=(-2.0, 0.0, 0.75), rot=(-0.5, -0.5, 0.5, 0.5), convention="opengl"),
         data_types=["rgba", "depth"],
         spawn=sim_utils.PinholeCameraCfg(
@@ -89,8 +86,8 @@ class ShadowHandDepthCameraEnvCfg(ShadowHandEnvCfg):
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
         ),
-        width=160,
-        height=120,
+        width=320,
+        height=240,
     )
     write_image_to_file = False
 
@@ -116,11 +113,6 @@ class ShadowHandDepthCameraAsymmetricEnvCfg(ShadowHandDepthCameraEnvCfg):
 
 class ShadowHandCameraEnv(ShadowHandEnv):
     cfg: ShadowHandEnvCfg
-
-    def __init__(self, cfg: ShadowHandEnvCfg, render_mode: str | None = None, **kwargs):
-        super().__init__(cfg, render_mode, **kwargs)
-        # self.goal_pos[:, :] = torch.tensor([-0.15, -0.15, 0.5], device=self.device)
-        # self.resnet = self._get_embeddings_model()
 
     def _configure_gym_env_spaces(self):
         """Configure the action and observation spaces for the Gym environment."""
@@ -166,60 +158,6 @@ class ShadowHandCameraEnv(ShadowHandEnv):
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
 
-    def _get_embeddings_model(self):
-        resnet18 = models.resnet18(weights=models.ResNet18_Weights.DEFAULT, pretrained=True)
-        modules = list(resnet18.children())[:-1]
-        resnet18 = nn.Sequential(*modules)
-        for p in resnet18.parameters():
-            p.requires_grad = False
-        model = resnet18
-        model.to(self.device)
-        return model
-
-    def compute_embeddings_observations(self):
-        # obs = torch.cat(
-        #     (
-        #         # hand
-        #         unscale(self.hand_dof_pos, self.hand_dof_lower_limits, self.hand_dof_upper_limits),  # 0:24
-        #         self.cfg.vel_obs_scale * self.hand_dof_vel,  # 24:48
-        #         # object
-        #         self.embeddings,
-        #         # goal
-        #         self.goal_rot,  # 64:68
-        #         # fingertips
-        #         self.fingertip_pos.view(self.num_envs, self.num_fingertips * 3),  # 72:87
-        #         self.fingertip_rot.view(self.num_envs, self.num_fingertips * 4),  # 87:107
-        #         self.fingertip_velocities.view(self.num_envs, self.num_fingertips * 6),  # 107:137
-        #         # actions
-        #         self.actions,  # 137:157
-        #     ),
-        #     dim=-1,
-        # )
-        
-
-        def _get_embeddings(self, img):
-            self.img[:, :self.img_height, :self.img_width, :] = observations["policy"]
-            transformed_img = self.transform(self.img.permute(0, 3, 1, 2))
-
-            with torch.no_grad():
-                for i in range(0, self.num_envs, self.batch_size):
-                    bound = min(self.batch_size+i, self.num_envs)
-                    embeddings = self.model(transformed_img[i:bound]).view(bound-i, -1)
-                    self.embeddings[i:bound, :] = embeddings
-
-        obs = torch.cat(
-            (
-                # object
-                self.embeddings,
-                # goal
-                self.goal_rot,  # 64:68
-                # actions
-                self.actions,  # 137:157
-            ),
-            dim=-1,
-        )
-        return obs
-
     def _get_observations(self) -> dict:
         if self.cfg.asymmetric_obs:
             self.fingertip_force_sensors = self.hand.root_physx_view.get_link_incoming_joint_force()[
@@ -232,7 +170,7 @@ class ShadowHandCameraEnv(ShadowHandEnv):
             data_type = "depth"
             camera_data = self._tiled_camera.data.output[data_type].clone()
             camera_data[camera_data==float("inf")] = 0
-            camera_data /= 5.0
+            camera_data /= 2.0
             self._save_images("depth", camera_data)
             observations = {"policy": camera_data}
             if self.cfg.asymmetric_obs:
@@ -240,7 +178,7 @@ class ShadowHandCameraEnv(ShadowHandEnv):
         elif self.cfg.num_channels == 3:
             # RGB
             data_type = "rgba"
-            rgb_data = 1 - self._tiled_camera.data.output[data_type][..., :3].clone()
+            rgb_data = self._tiled_camera.data.output[data_type][..., :3].clone()
             self._save_images("rgb", rgb_data)
             observations = {"policy": rgb_data}
             if self.cfg.asymmetric_obs:
@@ -250,7 +188,7 @@ class ShadowHandCameraEnv(ShadowHandEnv):
             depth_data = self._tiled_camera.data.output["depth"].clone()
             depth_data[depth_data==float("inf")] = 0
             depth_data /= 2.0
-            rgb_data = 1 - self._tiled_camera.data.output["rgba"][..., :3].clone()
+            rgb_data = self._tiled_camera.data.output["rgba"][..., :3].clone()
             self._save_images("rgb", rgb_data)
             self._save_images("depth", depth_data)
             camera_data = torch.cat((rgb_data, depth_data), dim=-1)
