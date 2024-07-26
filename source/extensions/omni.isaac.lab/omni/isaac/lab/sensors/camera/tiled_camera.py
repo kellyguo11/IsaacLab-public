@@ -8,7 +8,6 @@ from __future__ import annotations
 import math
 import numpy as np
 import torch
-import warnings
 from collections.abc import Sequence
 from tensordict import TensorDict
 from typing import TYPE_CHECKING, Any
@@ -38,7 +37,8 @@ class TiledCamera(Camera):
 
     The following sensor types are supported:
 
-    - ``"rgba"``: A rendered color image.
+    - ``"rgb"``: A 3-channel rendered color image.
+    - ``"rgba"``: A 4-channel rendered color image.
     - ``"depth"``: An image containing the distance to camera optical center.
 
     .. versionadded:: v1.0.0
@@ -51,7 +51,7 @@ class TiledCamera(Camera):
     cfg: TiledCameraCfg
     """The configuration parameters."""
 
-    SUPPORTED_TYPES: set[str] = {"rgb", "rgba", "depth"}  # RGB only for backwards compatibility
+    SUPPORTED_TYPES: set[str] = {"rgb", "rgba", "depth"}
     """The set of sensor types that are supported."""
 
     def __init__(self, cfg: TiledCameraCfg):
@@ -165,7 +165,7 @@ class TiledCamera(Camera):
         # Create render product
         rp = rep.create.render_product(self._view.prim_paths[0], full_resolution)
 
-        # Attach all cameras
+        # Attach all cameras to render product
         rp_prim = stage.GetPrimAtPath(rp.path)
         with Usd.EditContext(stage, stage.GetSessionLayer()):
             rp_prim.GetRelationship("camera").SetTargets(self._view.prim_paths)
@@ -227,12 +227,6 @@ class TiledCamera(Camera):
                 f" following where provided: {cfg.data_types}"
             )
 
-        # check for deprecation
-        if "rgb" in cfg.data_types:
-            msg = "Tiled Camera data type 'rgb' is deprecated. Please use 'rgba' instead."
-            warnings.warn(msg, DeprecationWarning)
-            carb.log_warn(msg)
-
     def _create_buffers(self):
         """Create buffers for storing data."""
         # create the data object
@@ -246,17 +240,13 @@ class TiledCamera(Camera):
         self._data.image_shape = self.image_shape
         # -- output data
         data_dict = dict()
-        if "rgba" in self.cfg.data_types:
+        if "rgba" in self.cfg.data_types or "rgb" in self.cfg.data_types:
             data_dict["rgba"] = torch.zeros(
                 (self._view.count, self.cfg.height, self.cfg.width, 4), device=self.device
             ).contiguous()
         if "rgb" in self.cfg.data_types:
-            data_dict["rgb"] = torch.zeros(
-                (self._view.count, self.cfg.height, self.cfg.width, 3), device=self.device
-            ).contiguous()
-            data_dict["rgba"] = torch.zeros(
-                (self._view.count, self.cfg.height, self.cfg.width, 4), device=self.device
-            ).contiguous()
+            # RGB is the first 3 channels of RGBA
+            data_dict["rgb"] = data_dict["rgba"][..., :3]
         if "depth" in self.cfg.data_types:
             data_dict["depth"] = torch.zeros(
                 (self._view.count, self.cfg.height, self.cfg.width, 1), device=self.device
