@@ -150,7 +150,7 @@ class ShadowHandCameraEnv(ShadowHandEnv):
         # add hand, in-hand object, and goal object
         self.hand = Articulation(self.cfg.robot_cfg)
         self.object = RigidObject(self.cfg.object_cfg)
-        self._tiled_camera = TiledCamera(self.cfg.tiled_camera)
+        self._tiled_camera = self.cfg.tiled_camera.class_type(self.cfg.tiled_camera)
         # clone and replicate (no need to filter for this environment)
         self.scene.clone_environments(copy_from_source=False)
         # add articultion to scene - we must register to scene to randomize with EventManager
