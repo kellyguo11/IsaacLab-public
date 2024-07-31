@@ -18,6 +18,7 @@ from omni.isaac.lab.assets import Articulation, ArticulationCfg
 from omni.isaac.lab.envs import DirectRLEnv, DirectRLEnvCfg, ViewerCfg
 from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.sensors import TiledCamera, TiledCameraCfg, save_images_to_file
+from omni.isaac.lab.sensors.camera.tiled_camera import TiledCameraOld
 from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.math import sample_uniform
@@ -43,6 +44,7 @@ class CartpoleRGBCameraEnvCfg(DirectRLEnvCfg):
 
     # camera
     tiled_camera: TiledCameraCfg = TiledCameraCfg(
+        class_type=TiledCameraOld,
         prim_path="/World/envs/env_.*/Camera",
         offset=TiledCameraCfg.OffsetCfg(pos=(-5.0, 0.0, 2.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world"),
         data_types=["rgb"],
