@@ -35,8 +35,7 @@ class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
         prim_path="/World/envs/env_.*/Camera",
         offset=TiledCameraCfg.OffsetCfg(pos=(0.0, -0.27, 1.5), rot=(0.0, 0.0, 0.0, -1.0), convention="opengl"),
         # offset=TiledCameraCfg.OffsetCfg(pos=(-2.0, 0.0, 0.75), rot=(-0.5, -0.5, 0.5, 0.5), convention="opengl"),
-        data_types=["rgba"],
-        # data_types=["rgb"],
+        data_types=["rgb"],
         # class_type=TiledCameraOld,
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
@@ -180,8 +179,8 @@ class ShadowHandCameraEnv(ShadowHandEnv):
                 observations = {"policy": camera_data, "critic": states}
         elif self.cfg.num_channels == 3:
             # RGB
-            data_type = "rgba"
-            rgb_data = self._tiled_camera.data.output[data_type][..., :3].clone()
+            data_type = "rgb"
+            rgb_data = self._tiled_camera.data.output[data_type].clone()
             self._save_images("rgb", rgb_data)
             observations = {"policy": rgb_data}
             if self.cfg.asymmetric_obs:

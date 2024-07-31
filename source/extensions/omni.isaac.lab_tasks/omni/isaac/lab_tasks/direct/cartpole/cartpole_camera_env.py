@@ -44,7 +44,7 @@ class CartpoleRGBCameraEnvCfg(DirectRLEnvCfg):
 
     # camera
     tiled_camera: TiledCameraCfg = TiledCameraCfg(
-        class_type=TiledCameraOld,
+        # class_type=TiledCameraOld,
         prim_path="/World/envs/env_.*/Camera",
         offset=TiledCameraCfg.OffsetCfg(pos=(-5.0, 0.0, 2.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world"),
         data_types=["rgb"],
