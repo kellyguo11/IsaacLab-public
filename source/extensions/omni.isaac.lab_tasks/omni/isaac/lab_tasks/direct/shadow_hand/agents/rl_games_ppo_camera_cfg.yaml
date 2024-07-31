@@ -16,7 +16,7 @@ params:
 
   # doesn't have this fine grained control but made it close
   network:
-    name: resnet_actor_critic
+    name: actor_critic
     separate: False
     space:
       continuous:
@@ -29,41 +29,37 @@ params:
           name: const_initializer
           val: 0
         fixed_sigma: True
-    cnn:
-      type: conv2d
-      activation: relu
+    mlp:
+      units: [512, 512, 256, 128]
+      activation: elu
+      d2rl: False
+
       initializer:
-          name: default
+        name: default
       regularizer:
         name: None
-      conv_depths: [16, 32, 32]
-
-    mlp:
-      units: [512]
-      activation: elu
-      initializer:
-          name: default
 
   load_checkpoint: False # flag which sets whether to load the checkpoint
   load_path: '' # path to the checkpoint to load
 
   config:
-    name: shadow_hand_rgb
+    name: shadow_hand_resnet
     env_name: rlgpu
     device: 'cuda:0'
     device_name: 'cuda:0'
     multi_gpu: False
     ppo: True
     mixed_precision: False
-    normalize_input: False
+    normalize_input: True
     normalize_value: True
+    value_bootstrap: True
     num_actors: -1  # configured from the script (based on num_envs)
     reward_shaper:
-      scale_value: 1.0
+      scale_value: 0.01
     normalize_advantage: True
     gamma: 0.99
     tau : 0.95
-    learning_rate: 1e-4
+    learning_rate: 5e-4
     lr_schedule: adaptive
     schedule_type: standard
     kl_threshold: 0.016
@@ -76,10 +72,10 @@ params:
     entropy_coef: 0.0
     truncate_grads: True
     e_clip: 0.2
-    horizon_length: 64
-    minibatch_size: 2048 #32768
-    mini_epochs: 4
-    critic_coef: 2
+    horizon_length: 32
+    minibatch_size: 8192
+    mini_epochs: 5
+    critic_coef: 4
     clip_value: True
     seq_length: 4
     bounds_loss_coef: 0.0001
