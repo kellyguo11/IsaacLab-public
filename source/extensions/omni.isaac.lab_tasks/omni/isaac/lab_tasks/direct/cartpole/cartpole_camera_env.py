@@ -152,7 +152,7 @@ class CartpoleCameraEnv(DirectRLEnv):
     def _setup_scene(self):
         """Setup the scene with the cartpole and camera."""
         self._cartpole = Articulation(self.cfg.robot_cfg)
-        self._tiled_camera = TiledCamera(self.cfg.tiled_camera)
+        self._tiled_camera = self.cfg.tiled_camera.class_type(self.cfg.tiled_camera)
 
         # clone, filter, and replicate
         self.scene.clone_environments(copy_from_source=False)
