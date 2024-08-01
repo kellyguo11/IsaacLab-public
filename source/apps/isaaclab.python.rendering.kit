@@ -37,6 +37,13 @@ app.version = "4.0.0"
 # set the default ros bridge to disable on startup
 isaac.startup.ros_bridge_extension = ""
 
+# Flags for better rendering performance
+rtx.translucency.enabled = false
+rtx.reflections.enabled = false
+rtx.indirectDiffuse.enabled = false
+rtx.transient.dlssg.enabled = false
+rtx.directLighting.sampledLighting.samplesPerPixel = 1
+
 # Enable new denoiser to reduce motion blur artifacts
 rtx.newDenoiser.enabled=true
 
