@@ -14,7 +14,7 @@ from collections.abc import Sequence
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import Articulation, RigidObject
 from omni.isaac.lab.scene import InteractiveSceneCfg
-from omni.isaac.lab.sensors import TiledCamera, TiledCameraCfg, save_images_to_file
+from omni.isaac.lab.sensors import Camera, CameraCfg, TiledCamera, TiledCameraCfg, save_images_to_file
 from omni.isaac.lab.sensors.camera.tiled_camera import TiledCameraOld
 from omni.isaac.lab.sim import PhysxCfg, SimulationCfg
 from omni.isaac.lab.sim.spawners.materials.physics_materials_cfg import RigidBodyMaterialCfg
@@ -28,7 +28,7 @@ from .shadow_hand_env_cfg import ShadowHandEnvCfg
 @configclass
 class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=64, env_spacing=5.0, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=128, env_spacing=5.0, replicate_physics=True)
 
     # camera
     tiled_camera: TiledCameraCfg = TiledCameraCfg(
@@ -43,6 +43,19 @@ class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
         width=320,
         height=240,
     )
+    # tiled_camera: CameraCfg = CameraCfg(
+    #     prim_path="/World/envs/env_.*/Camera",
+    #     offset=TiledCameraCfg.OffsetCfg(pos=(0.0, -0.27, 1.5), rot=(0.0, 0.0, 0.0, -1.0), convention="opengl"),
+    #     # offset=TiledCameraCfg.OffsetCfg(pos=(-2.0, 0.0, 0.75), rot=(-0.5, -0.5, 0.5, 0.5), convention="opengl"),
+    #     data_types=["rgb"],
+    #     # class_type=TiledCameraOld,
+    #     spawn=sim_utils.PinholeCameraCfg(
+    #         focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
+    #     ),
+    #     width=320,
+    #     height=240,
+    # )
+
     write_image_to_file = False
 
     # env

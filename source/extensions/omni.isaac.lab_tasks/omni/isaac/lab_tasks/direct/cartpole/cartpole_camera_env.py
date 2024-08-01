@@ -17,7 +17,7 @@ import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import Articulation, ArticulationCfg
 from omni.isaac.lab.envs import DirectRLEnv, DirectRLEnvCfg, ViewerCfg
 from omni.isaac.lab.scene import InteractiveSceneCfg
-from omni.isaac.lab.sensors import TiledCamera, TiledCameraCfg, save_images_to_file
+from omni.isaac.lab.sensors import Camera, CameraCfg, TiledCamera, TiledCameraCfg, save_images_to_file
 from omni.isaac.lab.sensors.camera.tiled_camera import TiledCameraOld
 from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.utils import configclass
@@ -54,6 +54,17 @@ class CartpoleRGBCameraEnvCfg(DirectRLEnvCfg):
         width=128,
         height=128,
     )
+    # tiled_camera: CameraCfg = CameraCfg(
+    #     class_type=Camera,
+    #     prim_path="/World/envs/env_.*/Camera",
+    #     offset=CameraCfg.OffsetCfg(pos=(-5.0, 0.0, 2.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world"),
+    #     data_types=["rgb"],
+    #     spawn=sim_utils.PinholeCameraCfg(
+    #         focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
+    #     ),
+    #     width=128,
+    #     height=128,
+    # )
     num_observations = num_channels * tiled_camera.height * tiled_camera.width
     write_image_to_file = False
 
