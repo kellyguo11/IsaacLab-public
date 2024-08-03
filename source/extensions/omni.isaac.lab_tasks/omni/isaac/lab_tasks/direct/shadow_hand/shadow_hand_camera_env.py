@@ -246,15 +246,13 @@ class ShadowHandCameraEnv(ShadowHandEnv):
         
         # model = ResNet18()
         self.rgb_model = CustomCNN(self.device)
-        # self.depth_model = CustomCNN(depth=True)
         self.rgb_model.to(self.device)
+        # self.depth_model = CustomCNN(depth=True)
         # self.depth_model.to(self.device)
         
     
     def compute_embeddings_observations(self, state_obs):
-        rgb_img = self._tiled_camera.data.output["rgb"][..., :3].clone()
-        
-
+        rgb_img = self._tiled_camera.data.output["rgb"].clone()
         # mean_tensor = torch.mean(rgb_img, dim=(1, 2), keepdim=True)
         # rgb_img -= mean_tensor
         # depth_img = self._tiled_camera.data.output["depth"].clone()
