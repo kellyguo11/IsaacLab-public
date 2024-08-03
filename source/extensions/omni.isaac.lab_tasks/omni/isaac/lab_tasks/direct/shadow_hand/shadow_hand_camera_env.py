@@ -30,7 +30,7 @@ from .shadow_hand_env_cfg import ShadowHandEnvCfg
 @configclass
 class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=128, env_spacing=5.0, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=512, env_spacing=5.0, replicate_physics=True)
 
     # camera
     tiled_camera: TiledCameraCfg = TiledCameraCfg(
@@ -50,7 +50,7 @@ class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
 
     # env
     num_channels = 3
-    num_observations = 157-17+128+128#649#536 #num_channels * tiled_camera.height * tiled_camera.width #+ 157
+    num_observations = 157-17+512#649#536 #num_channels * tiled_camera.height * tiled_camera.width #+ 157
 
 
 @configclass
@@ -203,55 +203,72 @@ class ShadowHandCameraEnv(ShadowHandEnv):
                 return x
 
         class CustomCNN(nn.Module):
-            def __init__(self, depth=False):
+            def __init__(self, device, depth=False):
+                self.device = device
                 super().__init__()
-                # We assume CxHxW images (channels first)
-                # Re-ordering will be done by pre-preprocessing or wrapper
                 num_channel = 1 if depth else 3
                 self.cnn = nn.Sequential(
                     nn.Conv2d(num_channel, 16, kernel_size=6, stride=2, padding=0),
                     nn.ReLU(),
-                    nn.Conv2d(16, 32, kernel_size=5, stride=2, padding=0),
+                    # nn.BatchNorm2d(16),
+                    nn.LayerNorm([16, 110, 110]),
+                    nn.Conv2d(16, 32, kernel_size=4, stride=2, padding=0),
                     nn.ReLU(),
+                    # nn.BatchNorm2d(32),
+                    nn.LayerNorm([32, 54, 54]),
                     nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
                     nn.ReLU(),
-                    nn.Conv2d(64, 64, kernel_size=4, stride=1, padding=0),
+                    # nn.BatchNorm2d(64),
+                    nn.LayerNorm([64, 26, 26]),
+                    nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=0),
                     nn.ReLU(),
+                    # nn.BatchNorm2d(128),
+                    nn.LayerNorm([128, 12, 12]),
+                    nn.AvgPool2d(12)
                 )
 
                 self.linear = nn.Sequential(
-                    nn.Linear(64*22*22, 1024), 
+                    nn.Linear(128, 256), 
                     nn.ReLU(),
-                    nn.Linear(1024, 128), 
+                    nn.Linear(256, 512), 
                     nn.ReLU(),
                 )
 
+                self.resnet18_mean = torch.tensor([0.485, 0.0456, 0.0406], device=self.device)
+                self.resnet18_std = torch.tensor([0.229, 0.224, 0.225], device=self.device)
+                self.resnet_transform = transforms.Normalize(self.resnet18_mean, self.resnet18_std)
+
             def forward(self, x):
                 # save_images_to_file(x, f"shadow_hand_transformed.png")
-                cnn_x = self.cnn(x.permute(0, 3, 1, 2))
-                out = self.linear(cnn_x.reshape(-1, 64*22*22))
+                cnn_x = self.cnn(self.resnet_transform(x.permute(0, 3, 1, 2)))
+                out = self.linear(cnn_x.view(-1, 128))
                 return out
         
         # model = ResNet18()
-        self.rgb_model = CustomCNN()
-        self.depth_model = CustomCNN(depth=True)
+        self.rgb_model = CustomCNN(self.device)
+        # self.depth_model = CustomCNN(depth=True)
         self.rgb_model.to(self.device)
-        self.depth_model.to(self.device)
+        # self.depth_model.to(self.device)
+        
     
     def compute_embeddings_observations(self, state_obs):
-        rgb_img = 1 - self._tiled_camera.data.output["rgb"][..., :3].clone()
-        depth_img = self._tiled_camera.data.output["depth"].clone()
-        depth_img[depth_img==float("inf")] = 0
-        depth_img /= 5.0
-        depth_img /= torch.max(depth_img)
+        rgb_img = self._tiled_camera.data.output["rgb"][..., :3].clone()
+        
+
+        # mean_tensor = torch.mean(rgb_img, dim=(1, 2), keepdim=True)
+        # rgb_img -= mean_tensor
+        # depth_img = self._tiled_camera.data.output["depth"].clone()
+        # depth_img[depth_img==float("inf")] = 0
+        # depth_img /= 5.0
+        # depth_img /= torch.max(depth_img)
         rgb_embeddings = self.rgb_model(rgb_img)
-        depth_embeddings = self.depth_model(depth_img)
+        # depth_embeddings = self.depth_model(depth_img)
 
         obs = torch.cat(
             (
                 state_obs,
                 rgb_embeddings,
-                depth_embeddings
+                # depth_embeddings
             ),
             dim=-1
         )

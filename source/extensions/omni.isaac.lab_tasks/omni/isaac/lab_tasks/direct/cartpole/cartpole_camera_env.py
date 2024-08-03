@@ -53,7 +53,7 @@ class CartpoleRGBCameraEnvCfg(DirectRLEnvCfg):
         height=80,
     )
     num_observations = num_channels * tiled_camera.height * tiled_camera.width
-    write_image_to_file = False
+    write_image_to_file = True
 
     # change viewer settings
     viewer = ViewerCfg(eye=(20.0, 20.0, 20.0))
@@ -172,14 +172,16 @@ class CartpoleCameraEnv(DirectRLEnv):
     def _get_observations(self) -> dict:
         data_type = "rgb" if "rgb" in self.cfg.tiled_camera.data_types else "depth"
         if "rgb" in self.cfg.tiled_camera.data_types:
-            camera_data = 1 - self._tiled_camera.data.output[data_type]
+            camera_data = self._tiled_camera.data.output[data_type]
+            mean_tensor = torch.mean(camera_data, dim=(1, 2), keepdim=True)
+            camera_data -= mean_tensor
         elif "depth" in self.cfg.tiled_camera.data_types:
             camera_data = self._tiled_camera.data.output[data_type]
             camera_data[camera_data == float("inf")] = 0
         observations = {"policy": camera_data.clone()}
 
         if self.cfg.write_image_to_file:
-            save_images_to_file(observations["policy"], f"cartpole_{data_type}.png")
+            save_images_to_file(torch.clamp(observations["policy"], 0, 1), f"cartpole_{data_type}.png")
 
         return observations
 
