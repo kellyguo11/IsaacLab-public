@@ -152,8 +152,7 @@ class TiledCamera(Camera):
             sensor_prim = UsdGeom.Camera(cam_prim)
             self._sensor_prims.append(sensor_prim)
 
-        # start the orchestrator (if not already started)
-        rep.orchestrator._orchestrator._is_started = True
+        # get full resolution for all tiles
         full_resolution = self._tiled_image_shape()
 
         # Set carb settings for tiled rendering

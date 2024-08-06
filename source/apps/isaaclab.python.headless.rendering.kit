@@ -70,6 +70,8 @@ app.audio.enabled = false
 # Enable Vulkan - avoids torch+cu12 error on windows
 app.vulkan = true
 
+exts."omni.replicator.core".Orchestrator.enabled = false
+
 [settings.exts."omni.kit.registry.nucleus"]
 registries = [
     { name = "kit/default", url = "https://ovextensionsprod.blob.core.windows.net/exts/kit/prod/shared" },
