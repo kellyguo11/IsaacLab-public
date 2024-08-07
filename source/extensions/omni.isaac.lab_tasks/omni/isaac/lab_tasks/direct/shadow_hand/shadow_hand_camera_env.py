@@ -26,6 +26,8 @@ from omni.isaac.lab.utils import configclass
 from .shadow_hand_env import ShadowHandEnv, unscale
 from .shadow_hand_env_cfg import ShadowHandEnvCfg
 
+from omni.isaac.lab.utils.math import quat_conjugate, quat_from_angle_axis, quat_mul
+
 
 @configclass
 class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
@@ -50,7 +52,7 @@ class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
 
     # env
     num_channels = 3
-    num_observations = 157-17+512#649#536 #num_channels * tiled_camera.height * tiled_camera.width #+ 157
+    num_observations = 157-17+27+24+24#649#536 #num_channels * tiled_camera.height * tiled_camera.width #+ 157
 
 
 @configclass
@@ -126,6 +128,12 @@ class ShadowHandCameraEnv(ShadowHandEnv):
         # hide goal cubes
         self.goal_pos[:, :] = torch.tensor([-0.2, -0.45, 10.0], device=self.device)
 
+        import os
+        os.environ["MASTER_ADDR"] = "localhost"
+        os.environ["MASTER_PORT"] = "29500"
+        torch.distributed.init_process_group(
+            backend='nccl', world_size=os.getenv("WORLD_SIZE", 1), rank=0)
+
     # def _configure_gym_env_spaces(self):
     #     """Configure the action and observation spaces for the Gym environment."""
     #     # observation space (unbounded since we don't impose any limits)
@@ -196,10 +204,10 @@ class ShadowHandCameraEnv(ShadowHandEnv):
                 save_images_to_file(x, f"shadow_hand_untransformed.png")
                 x = x.permute(0, 3, 1, 2)
                 transformed_img = self.pretrain_transforms(x)
-                save_images_to_file(transformed_img.permute(0, 2, 3, 1), f"shadow_hand_transformed.png")
+                # save_images_to_file(transformed_img.permute(0, 2, 3, 1), f"shadow_hand_transformed.png")
                 with torch.no_grad():
                     x = self.resnet18(transformed_img)
-                x = self.postprocess(x.squeeze())
+                # x = self.postprocess(x.squeeze())
                 return x
 
         class CustomCNN(nn.Module):
@@ -228,10 +236,10 @@ class ShadowHandCameraEnv(ShadowHandEnv):
                 )
 
                 self.linear = nn.Sequential(
-                    nn.Linear(128, 256), 
-                    nn.ReLU(),
-                    nn.Linear(256, 512), 
-                    nn.ReLU(),
+                    nn.Linear(128, 27), 
+                    # nn.ReLU(),
+                    # nn.Linear(256, 512), 
+                    # nn.ReLU(),
                 )
 
                 self.resnet18_mean = torch.tensor([0.485, 0.0456, 0.0406], device=self.device)
@@ -240,32 +248,81 @@ class ShadowHandCameraEnv(ShadowHandEnv):
 
             def forward(self, x):
                 # save_images_to_file(x, f"shadow_hand_transformed.png")
-                cnn_x = self.cnn(self.resnet_transform(x.permute(0, 3, 1, 2)))
+                cnn_x = self.cnn(x.permute(0, 3, 1, 2))
+                # print("cnn", cnn_x.requires_grad)
                 out = self.linear(cnn_x.view(-1, 128))
+                # print("linear", out.requires_grad)
                 return out
         
-        # model = ResNet18()
+        # self.rgb_model = ResNet18()
         self.rgb_model = CustomCNN(self.device)
         self.rgb_model.to(self.device)
+        self.rgb_model.train()
         # self.depth_model = CustomCNN(depth=True)
         # self.depth_model.to(self.device)
+
+        self.rgb_optimizer = torch.optim.Adam(self.rgb_model.parameters(), lr=1e-5)
         
     
     def compute_embeddings_observations(self, state_obs):
+        # Step 3: Zero gradients
+        # for param in self.rgb_model.parameters():
+        #     param.grad = None
+        self.rgb_optimizer.zero_grad()
+
         rgb_img = self._tiled_camera.data.output["rgb"].clone()
-        # mean_tensor = torch.mean(rgb_img, dim=(1, 2), keepdim=True)
-        # rgb_img -= mean_tensor
+        mean_tensor = torch.mean(rgb_img, dim=(1, 2), keepdim=True)
+        rgb_img -= mean_tensor
         # depth_img = self._tiled_camera.data.output["depth"].clone()
         # depth_img[depth_img==float("inf")] = 0
         # depth_img /= 5.0
         # depth_img /= torch.max(depth_img)
-        rgb_embeddings = self.rgb_model(rgb_img)
+        rgb_embeddings = self.rgb_model(rgb_img).squeeze()
+        # relative_pose = quat_mul(self.object_rot, quat_conjugate(self.goal_rot))
+        # rgb_embeddings[:, 3:] = relative_pose.clone()
+        gt_keypoints = gen_keypoints(pose=torch.cat((self.object_pos, self.object_rot), dim=1))
+        for i in range(3):
+            gt_keypoints.view(-1, 24)[:, i] -= self.object.data.default_root_state[:, i]
+        object_pose = torch.cat([self.object_pos, gt_keypoints.view(-1, 24)], dim=-1)
+        # Define L2 loss
+        # l2_loss = nn.MSELoss()
+        # Calculate L2 loss
+        # pose_loss = l2_loss(rgb_embeddings, object_pose)
+        pose_loss = torch.mean((rgb_embeddings-object_pose)**2) * 100
+        # self.extras["pose_loss"] = pose_loss
         # depth_embeddings = self.depth_model(depth_img)
+
+        if "log" not in self.extras:
+            self.extras["log"] = dict()
+        self.extras["log"]["pose_loss"] = pose_loss
+
+        # Step 4: Backward pass
+        pose_loss.backward()
+        # Step 5: Update parameters
+        self.rgb_optimizer.step()
+
+        # Save model
+        if self._sim_step_counter % self.cfg.sim.render_interval == 0:
+            iteration = self._sim_step_counter // self.cfg.sim.render_interval
+            if iteration % 25000 == 0:
+                torch.save(self.rgb_model.state_dict(), f"cnn_{iteration}_{pose_loss.detach().cpu().numpy()}.pth")
+
+        rgb_embeddings_clone = rgb_embeddings.clone().detach()
+        # rgb_embeddings_clone[:, 3:] = gt_keypoints.view(-1, 24).clone()
+
+        goal_keypoints = gen_keypoints(pose=torch.cat((torch.zeros_like(self.goal_pos), self.goal_rot), dim=-1))
+        # zero_pos_obj_keypoints = gen_keypoints(pose=torch.cat((torch.zeros_like(self.goal_pos), self.object_rot), dim=-1))
+        predicted_cube_pos = rgb_embeddings_clone[:, :3]
+        zero_pos_obj_keypoints = rgb_embeddings_clone[:, 3:]
+        for i in range(3):
+            zero_pos_obj_keypoints[:, i] -= predicted_cube_pos[:, i]
 
         obs = torch.cat(
             (
                 state_obs,
-                rgb_embeddings,
+                rgb_embeddings_clone,
+                goal_keypoints.view(-1, 24),
+                goal_keypoints.view(-1, 24)-zero_pos_obj_keypoints,
                 # depth_embeddings
             ),
             dim=-1
@@ -351,3 +408,53 @@ class ShadowHandCameraEnv(ShadowHandEnv):
     def _save_images(self, data_type, camera_data):
         if self.cfg.write_image_to_file:
             save_images_to_file(camera_data, f"shadow_hand_{data_type}.png")
+
+
+@torch.jit.script
+def local_to_world_space(pos_offset_local: torch.Tensor, pose_global: torch.Tensor):
+    """ Convert a point from the local frame to the global frame
+    Args:
+        pos_offset_local: Point in local frame. Shape: [N, 3]
+        pose_global: The spatial pose of this point. Shape: [N, 7]
+    Returns:
+        Position in the global frame. Shape: [N, 3]
+    """
+    quat_pos_local = torch.cat(
+        [
+            torch.zeros(pos_offset_local.shape[0], 1, dtype=torch.float32, device=pos_offset_local.device), 
+            pos_offset_local
+        ], dim=-1
+    )
+    quat_trans = torch.cat(
+        [
+            torch.zeros(pos_offset_local.shape[0], 1, dtype=torch.float32, device=pos_offset_local.device), 
+            pose_global[:, 0:3]
+        ], dim=-1
+    )
+    quat_global = pose_global[:, 3:7]
+    quat_global_conj = quat_conjugate(quat_global)
+    pos_offset_global = quat_mul(quat_global, quat_mul(quat_pos_local, quat_global_conj))[:, 1:4]
+
+    result_pos_gloal = pos_offset_global + pose_global[:, 0:3]
+
+    return result_pos_gloal
+
+
+    size = [2*0.03, 2*0.03, 2*0.03]
+
+@torch.jit.script
+def gen_keypoints(
+    pose: torch.Tensor, 
+    num_keypoints: int = 8, 
+    size: Tuple[float, float, float] = (2*0.03, 2*0.03, 2*0.03)
+):
+
+    num_envs = pose.shape[0]
+    keypoints_buf = torch.ones(num_envs, num_keypoints, 3, dtype=torch.float32, device=pose.device)
+    for i in range(num_keypoints):
+        # which dimensions to negate
+        n = [((i >> k) & 1) == 0 for k in range(3)]
+        corner_loc = [(1 if n[k] else -1) * s / 2 for k, s in enumerate(size)],
+        corner = torch.tensor(corner_loc, dtype=torch.float32, device=pose.device) * keypoints_buf[:, i, :]
+        keypoints_buf[:, i, :] = local_to_world_space(corner, pose)
+    return keypoints_buf

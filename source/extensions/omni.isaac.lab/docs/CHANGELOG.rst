@@ -8,7 +8,7 @@ Changed
 ^^^^^^^
 
 * Updated :class:`omni.isaac.lab.sensors.camera.tiled_camera` to latest RTX tiled rendering API.
-
+* Updated torch to version 2.4.0.
 
 0.19.4 (2024-07-13)
 ~~~~~~~~~~~~~~~~~~~
