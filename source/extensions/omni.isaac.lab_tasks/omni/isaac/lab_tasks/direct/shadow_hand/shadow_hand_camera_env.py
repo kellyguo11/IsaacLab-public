@@ -25,6 +25,9 @@ from omni.isaac.lab.utils import configclass
 
 from .shadow_hand_env import ShadowHandEnv, unscale
 from .shadow_hand_env_cfg import ShadowHandEnvCfg
+from .models import Trainer
+
+from omni.isaac.lab.utils.math import quat_conjugate, quat_from_angle_axis, quat_mul
 
 
 @configclass
@@ -50,7 +53,7 @@ class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
 
     # env
     num_channels = 3
-    num_observations = 157-17+512#649#536 #num_channels * tiled_camera.height * tiled_camera.width #+ 157
+    num_observations = 157-17+27+24+24#649#536 #num_channels * tiled_camera.height * tiled_camera.width #+ 157
 
 
 @configclass
@@ -126,35 +129,6 @@ class ShadowHandCameraEnv(ShadowHandEnv):
         # hide goal cubes
         self.goal_pos[:, :] = torch.tensor([-0.2, -0.45, 10.0], device=self.device)
 
-    # def _configure_gym_env_spaces(self):
-    #     """Configure the action and observation spaces for the Gym environment."""
-    #     # observation space (unbounded since we don't impose any limits)
-    #     self.num_actions = self.cfg.num_actions
-    #     self.num_observations = self.cfg.num_observations
-    #     self.num_states = self.cfg.num_states
-
-    #     # set up spaces
-    #     self.single_observation_space = gym.spaces.Dict()
-    #     self.single_observation_space["policy"] = gym.spaces.Box(
-    #         low=-np.inf,
-    #         high=np.inf,
-    #         shape=(self.cfg.tiled_camera.height, self.cfg.tiled_camera.width, self.cfg.num_channels),
-    #     )
-    #     if self.num_states > 0:
-    #         self.single_observation_space["critic"] = gym.spaces.Box(
-    #             low=-np.inf,
-    #             high=np.inf,
-    #             shape=(self.cfg.tiled_camera.height, self.cfg.tiled_camera.width, self.cfg.num_channels),
-    #         )
-    #     self.single_action_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_actions,))
-
-    #     # batch the spaces for vectorized environments
-    #     self.observation_space = gym.vector.utils.batch_space(self.single_observation_space, self.num_envs)
-    #     self.action_space = gym.vector.utils.batch_space(self.single_action_space, self.num_envs)
-
-    #     # RL specifics
-    #     self.actions = torch.zeros(self.num_envs, self.num_actions, device=self.sim.device)
-
     def _setup_scene(self):
         # add hand, in-hand object, and goal object
         self.hand = Articulation(self.cfg.robot_cfg)
@@ -171,142 +145,79 @@ class ShadowHandCameraEnv(ShadowHandEnv):
         light_cfg.func("/World/Light", light_cfg)
 
     def _get_embeddings_model(self):
-        class ResNet18(nn.Module):
-            def __init__(self):
-                super(ResNet18, self).__init__()
-
-                weights = models.ResNet18_Weights.DEFAULT
-                self.pretrain_transforms = weights.transforms()
-                self.resnet18 = models.resnet18(weights=weights)
-                modules = list(self.resnet18.children())[:-1]
-                self.resnet18 = nn.Sequential(*modules)
-                for p in self.resnet18.parameters():
-                    p.requires_grad = False
-
-                self.resnet18.eval()
-
-                self.postprocess = nn.Sequential(
-                    nn.Linear(512, 256),
-                    nn.ReLU(),
-                    nn.Linear(256, 128),
-                    nn.ReLU()
-                )
-
-            def forward(self, x):
-                save_images_to_file(x, f"shadow_hand_untransformed.png")
-                x = x.permute(0, 3, 1, 2)
-                transformed_img = self.pretrain_transforms(x)
-                save_images_to_file(transformed_img.permute(0, 2, 3, 1), f"shadow_hand_transformed.png")
-                with torch.no_grad():
-                    x = self.resnet18(transformed_img)
-                x = self.postprocess(x.squeeze())
-                return x
-
-        class CustomCNN(nn.Module):
-            def __init__(self, device, depth=False):
-                self.device = device
-                super().__init__()
-                num_channel = 1 if depth else 3
-                self.cnn = nn.Sequential(
-                    nn.Conv2d(num_channel, 16, kernel_size=6, stride=2, padding=0),
-                    nn.ReLU(),
-                    # nn.BatchNorm2d(16),
-                    nn.LayerNorm([16, 110, 110]),
-                    nn.Conv2d(16, 32, kernel_size=4, stride=2, padding=0),
-                    nn.ReLU(),
-                    # nn.BatchNorm2d(32),
-                    nn.LayerNorm([32, 54, 54]),
-                    nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
-                    nn.ReLU(),
-                    # nn.BatchNorm2d(64),
-                    nn.LayerNorm([64, 26, 26]),
-                    nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=0),
-                    nn.ReLU(),
-                    # nn.BatchNorm2d(128),
-                    nn.LayerNorm([128, 12, 12]),
-                    nn.AvgPool2d(12)
-                )
-
-                self.linear = nn.Sequential(
-                    nn.Linear(128, 256), 
-                    nn.ReLU(),
-                    nn.Linear(256, 512), 
-                    nn.ReLU(),
-                )
-
-                self.resnet18_mean = torch.tensor([0.485, 0.0456, 0.0406], device=self.device)
-                self.resnet18_std = torch.tensor([0.229, 0.224, 0.225], device=self.device)
-                self.resnet_transform = transforms.Normalize(self.resnet18_mean, self.resnet18_std)
-
-            def forward(self, x):
-                # save_images_to_file(x, f"shadow_hand_transformed.png")
-                cnn_x = self.cnn(self.resnet_transform(x.permute(0, 3, 1, 2)))
-                out = self.linear(cnn_x.view(-1, 128))
-                return out
-        
-        # model = ResNet18()
-        self.rgb_model = CustomCNN(self.device)
-        self.rgb_model.to(self.device)
-        # self.depth_model = CustomCNN(depth=True)
-        # self.depth_model.to(self.device)
+        self.trainer = Trainer(self.device)
         
     
-    def compute_embeddings_observations(self, state_obs):
+    def compute_embeddings_observations(self):
         rgb_img = self._tiled_camera.data.output["rgb"].clone()
-        # mean_tensor = torch.mean(rgb_img, dim=(1, 2), keepdim=True)
-        # rgb_img -= mean_tensor
+        mean_tensor = torch.mean(rgb_img, dim=(1, 2), keepdim=True)
+        rgb_img -= mean_tensor
         # depth_img = self._tiled_camera.data.output["depth"].clone()
         # depth_img[depth_img==float("inf")] = 0
         # depth_img /= 5.0
         # depth_img /= torch.max(depth_img)
-        rgb_embeddings = self.rgb_model(rgb_img)
-        # depth_embeddings = self.depth_model(depth_img)
+        # rgb_embeddings = self.rgb_model(rgb_img).squeeze()
+        # # relative_pose = quat_mul(self.object_rot, quat_conjugate(self.goal_rot))
+        # # rgb_embeddings[:, 3:] = relative_pose.clone()
+        gt_keypoints = gen_keypoints(pose=torch.cat((self.object_pos, self.object_rot), dim=1))
+        for i in range(3):
+            gt_keypoints.view(-1, 24)[:, i] -= self.object.data.default_root_state[:, i]
+        object_pose = torch.cat([self.object_pos, gt_keypoints.view(-1, 24)], dim=-1)
+
+        pose_loss, rgb_embeddings = self.trainer.step(rgb_img, object_pose)
+
+        if "log" not in self.extras:
+            self.extras["log"] = dict()
+        self.extras["log"]["pose_loss"] = pose_loss
+
+        rgb_embeddings_clone = rgb_embeddings.clone().detach()
+        # rgb_embeddings_clone[:, 3:] = gt_keypoints.view(-1, 24).clone()
+
+        goal_keypoints = gen_keypoints(pose=torch.cat((torch.zeros_like(self.goal_pos), self.goal_rot), dim=-1))
+        # zero_pos_obj_keypoints = gen_keypoints(pose=torch.cat((torch.zeros_like(self.goal_pos), self.object_rot), dim=-1))
+        predicted_cube_pos = rgb_embeddings_clone[:, :3]
+        zero_pos_obj_keypoints = rgb_embeddings_clone[:, 3:]
+        for i in range(3):
+            zero_pos_obj_keypoints[:, i] -= predicted_cube_pos[:, i]
 
         obs = torch.cat(
             (
-                state_obs,
-                rgb_embeddings,
+                rgb_embeddings_clone,
+                goal_keypoints.view(-1, 24),
+                goal_keypoints.view(-1, 24)-zero_pos_obj_keypoints,
                 # depth_embeddings
             ),
             dim=-1
         )
 
-        # obs = torch.cat(
-        #     (
-        #         # hand
-        #         unscale(self.hand_dof_pos, self.hand_dof_lower_limits, self.hand_dof_upper_limits),  # 0:24
-        #         self.cfg.vel_obs_scale * self.hand_dof_vel,  # 24:48
-        #         # object
-        #         rgb_embeddings.squeeze(), #128
-        #         depth_embeddings.squeeze(), #128
-        #         # goal
-        #         self.goal_rot,  # 64:68
-        #         # fingertips
-        #         self.fingertip_pos.view(self.num_envs, self.num_fingertips * 3),  # 72:87
-        #         self.fingertip_rot.view(self.num_envs, self.num_fingertips * 4),  # 87:107
-        #         self.fingertip_velocities.view(self.num_envs, self.num_fingertips * 6),  # 107:137
-        #         # actions
-        #         self.actions,  # 137:157
-        #     ),
-        #     dim=-1,
-        # )
-        
-        # obs = torch.cat(
-        #     (
-        #         # object
-        #         embeddings.squeeze(), # 0:512
-        #         # goal
-        #         self.goal_rot,  # 512:515
-        #         # actions
-        #         self.actions,  # 515:535
-        #     ),
-        #     dim=-1,
-        # )
+        return obs
+
+    def compute_state_observations(self):
+        obs = torch.cat(
+            (
+                # hand
+                unscale(self.hand_dof_pos, self.hand_dof_lower_limits, self.hand_dof_upper_limits),  # 0:24
+                self.cfg.vel_obs_scale * self.hand_dof_vel,  # 24:48
+                # goal
+                self.in_hand_pos,  # 61:64
+                self.goal_rot,  # 64:68
+                # fingertips
+                self.fingertip_pos.view(self.num_envs, self.num_fingertips * 3),  # 72:87
+                self.fingertip_rot.view(self.num_envs, self.num_fingertips * 4),  # 87:107
+                self.fingertip_velocities.view(self.num_envs, self.num_fingertips * 6),  # 107:137
+                # actions
+                self.actions,  # 137:157
+            ),
+            dim=-1,
+        )
         return obs
 
     def _get_observations(self) -> dict:
-        state_obs = self.compute_full_observations()
-        obs = self.compute_embeddings_observations(state_obs)
+        state_obs = self.compute_state_observations()
+        embedding_obs = self.compute_embeddings_observations()
+        obs = torch.cat(
+            (state_obs, embedding_obs), dim=-1
+        )
         observations = {"policy": obs}
         return observations
         # if self.cfg.asymmetric_obs:
@@ -351,3 +262,53 @@ class ShadowHandCameraEnv(ShadowHandEnv):
     def _save_images(self, data_type, camera_data):
         if self.cfg.write_image_to_file:
             save_images_to_file(camera_data, f"shadow_hand_{data_type}.png")
+
+
+@torch.jit.script
+def local_to_world_space(pos_offset_local: torch.Tensor, pose_global: torch.Tensor):
+    """ Convert a point from the local frame to the global frame
+    Args:
+        pos_offset_local: Point in local frame. Shape: [N, 3]
+        pose_global: The spatial pose of this point. Shape: [N, 7]
+    Returns:
+        Position in the global frame. Shape: [N, 3]
+    """
+    quat_pos_local = torch.cat(
+        [
+            torch.zeros(pos_offset_local.shape[0], 1, dtype=torch.float32, device=pos_offset_local.device), 
+            pos_offset_local
+        ], dim=-1
+    )
+    quat_trans = torch.cat(
+        [
+            torch.zeros(pos_offset_local.shape[0], 1, dtype=torch.float32, device=pos_offset_local.device), 
+            pose_global[:, 0:3]
+        ], dim=-1
+    )
+    quat_global = pose_global[:, 3:7]
+    quat_global_conj = quat_conjugate(quat_global)
+    pos_offset_global = quat_mul(quat_global, quat_mul(quat_pos_local, quat_global_conj))[:, 1:4]
+
+    result_pos_gloal = pos_offset_global + pose_global[:, 0:3]
+
+    return result_pos_gloal
+
+
+    size = [2*0.03, 2*0.03, 2*0.03]
+
+@torch.jit.script
+def gen_keypoints(
+    pose: torch.Tensor, 
+    num_keypoints: int = 8, 
+    size: Tuple[float, float, float] = (2*0.03, 2*0.03, 2*0.03)
+):
+
+    num_envs = pose.shape[0]
+    keypoints_buf = torch.ones(num_envs, num_keypoints, 3, dtype=torch.float32, device=pose.device)
+    for i in range(num_keypoints):
+        # which dimensions to negate
+        n = [((i >> k) & 1) == 0 for k in range(3)]
+        corner_loc = [(1 if n[k] else -1) * s / 2 for k, s in enumerate(size)],
+        corner = torch.tensor(corner_loc, dtype=torch.float32, device=pose.device) * keypoints_buf[:, i, :]
+        keypoints_buf[:, i, :] = local_to_world_space(corner, pose)
+    return keypoints_buf
