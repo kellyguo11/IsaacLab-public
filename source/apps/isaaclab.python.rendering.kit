@@ -40,20 +40,23 @@ app.version = "4.0.0"
 # set the default ros bridge to disable on startup
 isaac.startup.ros_bridge_extension = ""
 
-# Enable new denoiser to reduce motion blur artifacts
-rtx.newDenoiser.enabled=true
+# Flags for better rendering performance
+rtx.translucency.enabled = false
+rtx.reflections.enabled = false
+rtx.indirectDiffuse.enabled = false
+rtx.transient.dlssg.enabled = false
+rtx.directLighting.sampledLighting.enabled = true
+rtx.directLighting.sampledLighting.samplesPerPixel = 1
+rtx.sceneDb.ambientLightIntensity = 1.0
+# rtx.shadows.enabled = false
 
 # Disable present thread to improve performance
 exts."omni.renderer.core".present.enabled=false
 
 # Disabling these settings reduces renderer VRAM usage and improves rendering performance, but at some quality cost
 rtx.raytracing.cached.enabled = false
-rtx.raytracing.lightcache.spatialCache.enabled = false
 rtx.ambientOcclusion.enabled = false
 rtx-transient.dlssg.enabled = false
-
-rtx.sceneDb.ambientLightIntensity = 1.0
-rtx.directLighting.sampledLighting.enabled = true
 
 # Avoids unnecessary GPU context initialization
 renderer.multiGpu.maxGpuCount=1
@@ -65,6 +68,8 @@ app.renderer.waitIdle=true
 app.hydraEngine.waitIdle=true
 
 app.audio.enabled = false
+
+exts."omni.replicator.core".Orchestrator.enabled = false
 
 [settings.physics]
 updateToUsd = false
