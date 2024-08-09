@@ -282,11 +282,14 @@ class RlGamesVecEnvWrapper(IVecEnv):
             Otherwise just the observations tensor is returned.
         """
         # process policy obs
-        obs = obs_dict["policy"]
+        # obs = obs_dict["policy"]
+
         # clip the observations
-        obs = torch.clamp(obs, -self._clip_obs, self._clip_obs)
+        obs_dict["policy"] = torch.clamp(obs_dict["policy"], -self._clip_obs, self._clip_obs)
         # move the buffer to rl-device
-        obs = obs.to(device=self._rl_device).clone()
+        obs_dict["policy"] = obs_dict["policy"].to(device=self._rl_device).clone()
+
+        obs = {'obs': obs_dict}
 
         # check if asymmetric actor-critic or not
         if self.rlg_num_states > 0:

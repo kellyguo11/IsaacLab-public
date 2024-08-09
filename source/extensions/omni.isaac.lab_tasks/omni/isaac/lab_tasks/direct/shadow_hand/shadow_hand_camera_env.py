@@ -125,7 +125,7 @@ class ShadowHandCameraEnv(ShadowHandEnv):
     def __init__(self, cfg: ShadowHandEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         # self.goal_pos[:, :] = torch.tensor([-0.15, -0.15, 0.5], device=self.device)
-        self._get_embeddings_model()
+        # self._get_embeddings_model()
         # hide goal cubes
         self.goal_pos[:, :] = torch.tensor([-0.2, -0.45, 10.0], device=self.device)
 
@@ -162,35 +162,35 @@ class ShadowHandCameraEnv(ShadowHandEnv):
         gt_keypoints = gen_keypoints(pose=torch.cat((self.object_pos, self.object_rot), dim=1))
         for i in range(3):
             gt_keypoints.view(-1, 24)[:, i] -= self.object.data.default_root_state[:, i]
-        object_pose = torch.cat([self.object_pos, gt_keypoints.view(-1, 24)], dim=-1)
+        gt_pose = torch.cat([self.object_pos, gt_keypoints.view(-1, 24)], dim=-1)
 
-        pose_loss, rgb_embeddings = self.trainer.step(rgb_img, object_pose)
+        # pose_loss, rgb_embeddings = self.trainer.step(rgb_img, object_pose)
 
-        if "log" not in self.extras:
-            self.extras["log"] = dict()
-        self.extras["log"]["pose_loss"] = pose_loss
+        # if "log" not in self.extras:
+        #     self.extras["log"] = dict()
+        # self.extras["log"]["pose_loss"] = pose_loss
 
-        rgb_embeddings_clone = rgb_embeddings.clone().detach()
+        # rgb_embeddings_clone = rgb_embeddings.clone().detach()
         # rgb_embeddings_clone[:, 3:] = gt_keypoints.view(-1, 24).clone()
 
         goal_keypoints = gen_keypoints(pose=torch.cat((torch.zeros_like(self.goal_pos), self.goal_rot), dim=-1))
         # zero_pos_obj_keypoints = gen_keypoints(pose=torch.cat((torch.zeros_like(self.goal_pos), self.object_rot), dim=-1))
-        predicted_cube_pos = rgb_embeddings_clone[:, :3]
-        zero_pos_obj_keypoints = rgb_embeddings_clone[:, 3:]
-        for i in range(3):
-            zero_pos_obj_keypoints[:, i] -= predicted_cube_pos[:, i]
+        # predicted_cube_pos = rgb_embeddings_clone[:, :3]
+        # zero_pos_obj_keypoints = rgb_embeddings_clone[:, 3:]
+        # for i in range(3):
+        #     zero_pos_obj_keypoints[:, i] -= predicted_cube_pos[:, i]
 
-        obs = torch.cat(
-            (
-                rgb_embeddings_clone,
-                goal_keypoints.view(-1, 24),
-                goal_keypoints.view(-1, 24)-zero_pos_obj_keypoints,
-                # depth_embeddings
-            ),
-            dim=-1
-        )
+        # obs = torch.cat(
+        #     (
+        #         rgb_embeddings_clone,
+        #         goal_keypoints.view(-1, 24),
+        #         goal_keypoints.view(-1, 24)-zero_pos_obj_keypoints,
+        #         # depth_embeddings
+        #     ),
+        #     dim=-1
+        # )
 
-        return obs
+        return rgb_img, gt_pose, goal_keypoints
 
     def compute_state_observations(self):
         obs = torch.cat(
@@ -214,11 +214,11 @@ class ShadowHandCameraEnv(ShadowHandEnv):
 
     def _get_observations(self) -> dict:
         state_obs = self.compute_state_observations()
-        embedding_obs = self.compute_embeddings_observations()
+        rgb_img, gt_pose, goal_keypoints = self.compute_embeddings_observations()
         obs = torch.cat(
-            (state_obs, embedding_obs), dim=-1
+            (state_obs, goal_keypoints.view(-1, 24), torch.zeros((self.num_envs, 27+24), device=self.device)), dim=-1
         )
-        observations = {"policy": obs}
+        observations = {"policy": obs, "image": rgb_img, "goal_keypoints": goal_keypoints, "gt_pose": gt_pose}
         return observations
         # if self.cfg.asymmetric_obs:
         #     self.fingertip_force_sensors = self.hand.root_physx_view.get_link_incoming_joint_force()[

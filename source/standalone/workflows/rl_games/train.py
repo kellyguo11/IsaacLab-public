@@ -50,6 +50,7 @@ from datetime import datetime
 from rl_games.common import env_configurations, vecenv
 from rl_games.common.algo_observer import IsaacAlgoObserver
 from rl_games.torch_runner import Runner
+from rl_games.algos_torch import model_builder
 
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
@@ -133,7 +134,10 @@ def main():
 
     # set number of actors into agent config
     agent_cfg["params"]["config"]["num_actors"] = env.unwrapped.num_envs
+
     # create runner from rl-games
+    from omni.isaac.lab_tasks.direct.shadow_hand.agents import rl_games_network_builder
+    model_builder.register_network('sh_cnn', lambda **kwargs : rl_games_network_builder.A2CBuilderCustomCNN())
     runner = Runner(IsaacAlgoObserver())
     runner.load(agent_cfg)
 
