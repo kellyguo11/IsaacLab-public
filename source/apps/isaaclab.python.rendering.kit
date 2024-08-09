@@ -42,22 +42,18 @@ rtx.translucency.enabled = false
 rtx.reflections.enabled = false
 rtx.indirectDiffuse.enabled = false
 rtx.transient.dlssg.enabled = false
+rtx.directLighting.sampledLighting.enabled = true
 rtx.directLighting.sampledLighting.samplesPerPixel = 1
-
-# Enable new denoiser to reduce motion blur artifacts
-rtx.newDenoiser.enabled=true
+rtx.sceneDb.ambientLightIntensity = 1.0
+# rtx.shadows.enabled = false
 
 # Disable present thread to improve performance
 exts."omni.renderer.core".present.enabled=false
 
 # Disabling these settings reduces renderer VRAM usage and improves rendering performance, but at some quality cost
 rtx.raytracing.cached.enabled = false
-rtx.raytracing.lightcache.spatialCache.enabled = false
 rtx.ambientOcclusion.enabled = false
 rtx-transient.dlssg.enabled = false
-
-rtx.sceneDb.ambientLightIntensity = 1.0
-rtx.directLighting.sampledLighting.enabled = true
 
 # Force synchronous rendering to improve training results
 omni.replicator.asyncRendering = false
