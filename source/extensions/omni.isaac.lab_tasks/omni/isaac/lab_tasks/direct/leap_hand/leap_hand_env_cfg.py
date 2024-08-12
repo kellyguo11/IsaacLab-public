@@ -16,16 +16,12 @@ from omni.isaac.lab.sim.spawners.materials.physics_materials_cfg import RigidBod
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 
-from omni.isaac.lab_tasks.direct.inhand_manipulation import InHandManipulationEnv
-from omni.isaac.lab.utils.math import saturate
-import torch
-
 
 @configclass
 class LeapHandEnvCfg(DirectRLEnvCfg):
     # env
     decimation = 6
-    episode_length_s = 10.0
+    episode_length_s = 20.0
     num_actions = 21
     num_observations = 152
     num_states = 0
@@ -47,34 +43,34 @@ class LeapHandEnvCfg(DirectRLEnvCfg):
     robot_cfg: ArticulationCfg = LEAP_HAND_CFG.replace(prim_path="/World/envs/env_.*/Robot")
 
     actuated_joint_names = [
-        "index_mcpf", 
-        "middle_mcpf", 
-        "ring_mcpf", 
-        "pinky_mcpf", 
-        "palm_4_finger", 
-        "index_mcps", 
-        "middle_mcps", 
-        "ring_mcps", 
-        "pinky_mcps", 
-        "palm_thumb", 
-        "index_pip", 
-        "middle_pip", 
-        "ring_pip", 
-        "pinky_pip", 
-        "thumb_mcpf", 
-        "index_dip", 
-        "middle_dip", 
-        "ring_dip", 
-        "pinky_dip", 
-        "thumb_mcps", 
-        "thumb_pip"
+        "index_mcpf",
+        "middle_mcpf",
+        "ring_mcpf",
+        "pinky_mcpf",
+        "palm_4_finger",
+        "index_mcps",
+        "middle_mcps",
+        "ring_mcps",
+        "pinky_mcps",
+        "palm_thumb",
+        "index_pip",
+        "middle_pip",
+        "ring_pip",
+        "pinky_pip",
+        "thumb_mcpf",
+        "index_dip",
+        "middle_dip",
+        "ring_dip",
+        "pinky_dip",
+        "thumb_mcps",
+        "thumb_ip",
     ]
     fingertip_body_names = [
-         "dip_tip_soft_upward_cut", 
-         "dip_tip_soft_upward_cut_2", 
-         "dip_tip_soft_upward_cut_3", 
-         "dip_tip_soft_upward_cut_4",
-         "thumb_tip_hard"
+        "dip_tip_soft_upward_cut",
+        "dip_tip_soft_upward_cut_2",
+        "dip_tip_soft_upward_cut_3",
+        "dip_tip_soft_upward_cut_4",
+        "thumb_tip_hard",
     ]
 
     # in-hand object
@@ -95,7 +91,7 @@ class LeapHandEnvCfg(DirectRLEnvCfg):
             mass_props=sim_utils.MassPropertiesCfg(density=400.0),
             scale=(1.0, 1.0, 1.0),
         ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, -0.025, 0.5), rot=(1.0, 0.0, 0.0, 0.0)),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(-0.02, -0.025, 0.5), rot=(1.0, 0.0, 0.0, 0.0)),
     )
     # goal object
     goal_object_cfg: VisualizationMarkersCfg = VisualizationMarkersCfg(
@@ -125,36 +121,5 @@ class LeapHandEnvCfg(DirectRLEnvCfg):
     success_tolerance = 0.1
     max_consecutive_success = 0
     av_factor = 0.1
-    act_moving_average = 1.0
+    act_moving_average = 1 / 24
     force_torque_obs_scale = 10.0
-
-
-class LeapHandEnv(InHandManipulationEnv):
-    cfg: LeapHandEnvCfg
-
-    def _apply_action(self) -> None:
-        self.cur_targets[:, self.actuated_dof_indices] = scale(
-            self.actions,
-            self.hand_dof_lower_limits[:, self.actuated_dof_indices],
-            self.hand_dof_upper_limits[:, self.actuated_dof_indices],
-        )
-        self.cur_targets[:, self.actuated_dof_indices] = (
-            self.actions
-            + self.prev_targets[:, self.actuated_dof_indices]
-        )
-        self.cur_targets[:, self.actuated_dof_indices] = saturate(
-            self.cur_targets[:, self.actuated_dof_indices],
-            self.hand_dof_lower_limits[:, self.actuated_dof_indices],
-            self.hand_dof_upper_limits[:, self.actuated_dof_indices],
-        )
-
-        self.prev_targets[:, self.actuated_dof_indices] = self.cur_targets[:, self.actuated_dof_indices]
-
-        self.hand.set_joint_position_target(
-            self.cur_targets[:, self.actuated_dof_indices], joint_ids=self.actuated_dof_indices
-        )
-
-@torch.jit.script
-def scale(x, lower, upper):
-    return 0.5 * (x + 1.0) * (upper - lower) + lower
-
