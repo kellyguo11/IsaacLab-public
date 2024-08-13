@@ -61,7 +61,7 @@ class InHandManipulationEnv(DirectRLEnv):
         self.goal_rot = torch.zeros((self.num_envs, 4), dtype=torch.float, device=self.device)
         self.goal_rot[:, 0] = 1.0
         self.goal_pos = torch.zeros((self.num_envs, 3), dtype=torch.float, device=self.device)
-        self.goal_pos[:, :] = torch.tensor([-0.2, -0.45, 0.68], device=self.device)
+        self.goal_pos[:, :] = torch.tensor(self.cfg.goal_object_pos, device=self.device)
         # initialize goal marker
         self.goal_markers = VisualizationMarkers(self.cfg.goal_object_cfg)
 

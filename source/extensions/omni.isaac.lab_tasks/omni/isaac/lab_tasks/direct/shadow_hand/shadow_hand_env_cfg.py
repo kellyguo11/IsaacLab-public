@@ -204,6 +204,7 @@ class ShadowHandEnvCfg(DirectRLEnvCfg):
             )
         },
     )
+    goal_object_pos = [-0.2, -0.45, 0.68]
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=8192, env_spacing=0.75, replicate_physics=True)
 
