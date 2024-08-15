@@ -450,8 +450,20 @@ class Camera(SensorBase):
                 else:
                     device_name = "cpu"
 
-                # create annotator node
-                rep_annotator = rep.AnnotatorRegistry.get_annotator(name, init_params, device=device_name)
+                # Parse special case for RGB/RGBA and depth/distance_to_image_plane alias
+                if name == "rgba":
+                    # create rgb annotator node
+                    rep_annotator = rep.AnnotatorRegistry.get_annotator("rgb", init_params, device=device_name)
+                elif name == "depth":
+                    # create annotator node
+                    rep_annotator = rep.AnnotatorRegistry.get_annotator(
+                        "distance_to_image_plane", init_params, device=device_name
+                    )
+                else:
+                    # create annotator node
+                    rep_annotator = rep.AnnotatorRegistry.get_annotator(name, init_params, device=device_name)
+
+                # attach annotator to render product
                 rep_annotator.attach(render_prod_path)
                 # add to registry
                 self._rep_registry[name].append(rep_annotator)
@@ -620,17 +632,27 @@ class Camera(SensorBase):
             if self.cfg.colorize_semantic_segmentation:
                 data = data.view(torch.uint8).reshape(height, width, -1)
             else:
-                data = data.view(height, width)
+                data = data.view(height, width, 1)
         elif name == "instance_segmentation_fast":
             if self.cfg.colorize_instance_segmentation:
                 data = data.view(torch.uint8).reshape(height, width, -1)
             else:
-                data = data.view(height, width)
+                data = data.view(height, width, 1)
         elif name == "instance_id_segmentation_fast":
             if self.cfg.colorize_instance_id_segmentation:
                 data = data.view(torch.uint8).reshape(height, width, -1)
             else:
-                data = data.view(height, width)
+                data = data.view(height, width, 1)
+        # make sure buffer dimensions are consistent as (H, W, C)
+        elif name == "distance_to_camera" or name == "distance_to_image_plane" or name == "depth":
+            data = data.view(height, width, 1)
+        # we only return the RGB channels from the RGBA output if rgb is required
+        # normals return (x, y, z) in first 3 channels, 4th channel is unused
+        elif name == "rgb" or name == "normals":
+            data = data[..., :3]
+        # motion vectors return (x, y) in first 2 channels, 3rd and 4th channels are unused
+        elif name == "motion_vectors":
+            data = data[..., :2]
 
         # return the data and info
         return data, info

@@ -51,9 +51,6 @@ class TiledCamera(Camera):
     cfg: TiledCameraCfg
     """The configuration parameters."""
 
-    SUPPORTED_TYPES: set[str] = {"rgb", "rgba", "depth"}
-    """The set of sensor types that are supported."""
-
     def __init__(self, cfg: TiledCameraCfg):
         """Initializes the tiled camera sensor.
 
@@ -80,6 +77,10 @@ class TiledCamera(Camera):
         return (
             f"Tiled Camera @ '{self.cfg.prim_path}': \n"
             f"\tdata types   : {self.data.output.sorted_keys} \n"
+            f"\tsemantic filter : {self.cfg.semantic_filter}\n"
+            f"\tcolorize semantic segm.   : {self.cfg.colorize_semantic_segmentation}\n"
+            f"\tcolorize instance segm.   : {self.cfg.colorize_instance_segmentation}\n"
+            f"\tcolorize instance id segm.: {self.cfg.colorize_instance_id_segmentation}\n"
             f"\tupdate period (s): {self.cfg.update_period}\n"
             f"\tshape        : {self.image_shape}\n"
             f"\tnumber of sensors : {self._view.count}"
@@ -170,16 +171,37 @@ class TiledCamera(Camera):
         with Usd.EditContext(stage, stage.GetSessionLayer()):
             rp_prim.GetRelationship("camera").SetTargets(self._view.prim_paths)
         self._render_product_paths = [rp.path]
-        # Attach the annotator
+
+        # Define the annotators based on requested data types
         self._annotators = dict()
-        if "rgba" in self.cfg.data_types or "rgb" in self.cfg.data_types:
-            annotator = rep.AnnotatorRegistry.get_annotator("rgb", device=self.device, do_array_copy=False)
-            self._annotators["rgba"] = annotator
-        if "depth" in self.cfg.data_types:
-            annotator = rep.AnnotatorRegistry.get_annotator(
-                "distance_to_camera", device=self.device, do_array_copy=False
-            )
-            self._annotators["depth"] = annotator
+        for annotator_type in self.cfg.data_types:
+            if annotator_type == "rgba" or annotator_type == "rgb":
+                annotator = rep.AnnotatorRegistry.get_annotator("rgb", device=self.device, do_array_copy=False)
+                self._annotators["rgba"] = annotator
+            elif annotator_type == "depth" or annotator_type == "distance_to_image_plane":
+                # keep depth for backwards compatibility
+                annotator = rep.AnnotatorRegistry.get_annotator(
+                    "distance_to_image_plane", device=self.device, do_array_copy=False
+                )
+                self._annotators["distance_to_image_plane"] = annotator
+            # note: we are verbose here to make it easier to understand the code.
+            #   if colorize is true, the data is mapped to colors and a uint8 4 channel image is returned.
+            #   if colorize is false, the data is returned as a uint32 image with ids as values.
+            else:
+                init_params = None
+                if annotator_type == "semantic_segmentation":
+                    init_params = {"colorize": self.cfg.colorize_semantic_segmentation}
+                elif annotator_type == "instance_segmentation_fast":
+                    init_params = {"colorize": self.cfg.colorize_instance_segmentation}
+                elif annotator_type == "instance_id_segmentation_fast":
+                    init_params = {"colorize": self.cfg.colorize_instance_id_segmentation}
+
+                annotator = rep.AnnotatorRegistry.get_annotator(
+                    annotator_type, init_params, device=self.device, do_array_copy=False
+                )
+                self._annotators[annotator_type] = annotator
+
+        # Attach the annotator to the render product
         for annotator in self._annotators.values():
             annotator.attach(self._render_product_paths)
 
@@ -192,11 +214,31 @@ class TiledCamera(Camera):
 
         # Extract the flattened image buffer
         for data_type, annotator in self._annotators.items():
-            tiled_data_buffer = annotator.get_data()
+            # check whether returned data is a dict (used for segmentation)
+            output = annotator.get_data()
+            if isinstance(output, dict):
+                tiled_data_buffer = output["data"]
+                self._data.info[data_type] = output["info"]
+            else:
+                tiled_data_buffer = output
+
+            # convert data buffer to warp array
             if isinstance(tiled_data_buffer, np.ndarray):
                 tiled_data_buffer = wp.array(tiled_data_buffer, device=self.device, dtype=wp.uint8)
             else:
                 tiled_data_buffer = tiled_data_buffer.to(device=self.device)
+
+            # process data for different segmentation types
+            # Note: Replicator returns raw buffers of dtype uint32 for segmentation types
+            #   so we need to convert them to uint8 4 channel images for colorized types
+            if (
+                (data_type == "semantic_segmentation" and self.cfg.colorize_semantic_segmentation)
+                or (data_type == "instance_segmentation_fast" and self.cfg.colorize_instance_segmentation)
+                or (data_type == "instance_id_segmentation_fast" and self.cfg.colorize_instance_id_segmentation)
+            ):
+                tiled_data_buffer = wp.array(
+                    ptr=tiled_data_buffer.ptr, shape=(*tiled_data_buffer.shape, 4), dtype=wp.uint8
+                )
 
             wp.launch(
                 kernel=reshape_tiled_image,
@@ -210,21 +252,35 @@ class TiledCamera(Camera):
                 device=self.device,
             )
 
-            if data_type == "rgba":
-                self._data.output[data_type] /= 255.0
-                if "rgb" in self.cfg.data_types:
-                    self._data.output["rgb"] = self._data.output["rgba"][..., :3]
+            # alias rgb as first 3 channels of rgba
+            if data_type == "rgba" and "rgb" in self.cfg.data_types:
+                self._data.output["rgb"] = self._data.output["rgba"][..., :3]
+            # alias depth as distance_to_image_plane
+            elif data_type == "distance_to_image_plane" and "depth" in self.cfg.data_types:
+                self._data.output["depth"] = self._data.output["distance_to_image_plane"]
 
     """
     Private Helpers
     """
 
     def _check_supported_data_types(self, cfg: TiledCameraCfg):
-        """Checks if the data types are supported by the camera."""
-        if not set(cfg.data_types).issubset(TiledCamera.SUPPORTED_TYPES):
+        """Checks if the data types are supported by the ray-caster camera."""
+        # check if there is any intersection in unsupported types
+        # reason: these use np structured data types which we can't yet convert to torch tensor
+        common_elements = set(cfg.data_types) & Camera.UNSUPPORTED_TYPES
+        if common_elements:
+            # provide alternative fast counterparts
+            fast_common_elements = []
+            for item in common_elements:
+                if "instance_segmentation" in item or "instance_id_segmentation" in item:
+                    fast_common_elements.append(item + "_fast")
+            # raise error
             raise ValueError(
-                f"The TiledCamera class only supports the following types {TiledCamera.SUPPORTED_TYPES} but the"
-                f" following where provided: {cfg.data_types}"
+                f"TiledCamera class does not support the following sensor types: {common_elements}."
+                "\n\tThis is because these sensor types output numpy structured data types which"
+                "can't be converted to torch tensors easily."
+                "\n\tHint: If you need to work with these sensor types, we recommend using their fast counterparts."
+                f"\n\t\tFast counterparts: {fast_common_elements}"
             )
 
     def _create_buffers(self):
@@ -242,16 +298,60 @@ class TiledCamera(Camera):
         data_dict = dict()
         if "rgba" in self.cfg.data_types or "rgb" in self.cfg.data_types:
             data_dict["rgba"] = torch.zeros(
-                (self._view.count, self.cfg.height, self.cfg.width, 4), device=self.device
+                (self._view.count, self.cfg.height, self.cfg.width, 4), device=self.device, dtype=torch.uint8
             ).contiguous()
         if "rgb" in self.cfg.data_types:
             # RGB is the first 3 channels of RGBA
             data_dict["rgb"] = data_dict["rgba"][..., :3]
-        if "depth" in self.cfg.data_types:
-            data_dict["depth"] = torch.zeros(
-                (self._view.count, self.cfg.height, self.cfg.width, 1), device=self.device
+        if "depth" in self.cfg.data_types or "distance_to_image_plane" in self.cfg.data_types:
+            data_dict["distance_to_image_plane"] = torch.zeros(
+                (self._view.count, self.cfg.height, self.cfg.width, 1), device=self.device, dtype=torch.float32
             ).contiguous()
+        if "depth" in self.cfg.data_types:
+            # assume distance_to_image_plane if depth is included in data types
+            data_dict["depth"] = data_dict["distance_to_image_plane"]
+        if "distance_to_camera" in self.cfg.data_types:
+            data_dict["distance_to_camera"] = torch.zeros(
+                (self._view.count, self.cfg.height, self.cfg.width, 1), device=self.device, dtype=torch.float32
+            ).contiguous()
+        if "normals" in self.cfg.data_types:
+            data_dict["normals"] = torch.zeros(
+                (self._view.count, self.cfg.height, self.cfg.width, 3), device=self.device, dtype=torch.float32
+            ).contiguous()
+        if "motion_vectors" in self.cfg.data_types:
+            data_dict["motion_vectors"] = torch.zeros(
+                (self._view.count, self.cfg.height, self.cfg.width, 2), device=self.device, dtype=torch.float32
+            ).contiguous()
+        if "semantic_segmentation" in self.cfg.data_types:
+            if self.cfg.colorize_semantic_segmentation:
+                data_dict["semantic_segmentation"] = torch.zeros(
+                    (self._view.count, self.cfg.height, self.cfg.width, 4), device=self.device, dtype=torch.uint8
+                ).contiguous()
+            else:
+                data_dict["semantic_segmentation"] = torch.zeros(
+                    (self._view.count, self.cfg.height, self.cfg.width, 1), device=self.device, dtype=torch.int32
+                ).contiguous()
+        if "instance_segmentation_fast" in self.cfg.data_types:
+            if self.cfg.colorize_instance_segmentation:
+                data_dict["instance_segmentation_fast"] = torch.zeros(
+                    (self._view.count, self.cfg.height, self.cfg.width, 4), device=self.device, dtype=torch.uint8
+                ).contiguous()
+            else:
+                data_dict["instance_segmentation_fast"] = torch.zeros(
+                    (self._view.count, self.cfg.height, self.cfg.width, 1), device=self.device, dtype=torch.int32
+                ).contiguous()
+        if "instance_id_segmentation_fast" in self.cfg.data_types:
+            if self.cfg.colorize_instance_id_segmentation:
+                data_dict["instance_id_segmentation_fast"] = torch.zeros(
+                    (self._view.count, self.cfg.height, self.cfg.width, 4), device=self.device, dtype=torch.uint8
+                ).contiguous()
+            else:
+                data_dict["instance_id_segmentation_fast"] = torch.zeros(
+                    (self._view.count, self.cfg.height, self.cfg.width, 1), device=self.device, dtype=torch.int32
+                ).contiguous()
+
         self._data.output = TensorDict(data_dict, batch_size=self._view.count, device=self.device)
+        self._data.info = dict()
 
     def _tiled_image_shape(self) -> tuple[int, int]:
         """Returns a tuple containing the dimension of the tiled image."""

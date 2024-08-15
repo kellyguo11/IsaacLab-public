@@ -98,7 +98,7 @@ class SensorsSceneCfg(InteractiveSceneCfg):
         update_period=0.1,
         height=480,
         width=640,
-        data_types=["rgb", "depth"],
+        data_types=["rgb", "distance_to_image_plane"],
         spawn=None,  # the camera is already spawned in the scene
         offset=TiledCameraCfg.OffsetCfg(pos=(0.510, 0.0, 0.015), rot=(0.5, -0.5, 0.5, -0.5), convention="ros"),
     )
@@ -223,7 +223,7 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         print("-------------------------------")
         print(scene["tiled_camera"])
         print("Received shape of rgb   image: ", scene["tiled_camera"].data.output["rgb"].shape)
-        print("Received shape of depth image: ", scene["tiled_camera"].data.output["depth"].shape)
+        print("Received shape of depth image: ", scene["tiled_camera"].data.output["distance_to_image_plane"].shape)
         print("-------------------------------")
         print(scene["raycast_camera"])
         print("Received shape of depth: ", scene["raycast_camera"].data.output["distance_to_image_plane"].shape)
@@ -244,7 +244,7 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
             # compare generated Depth images across different cameras
             depth_images = [
                 scene["camera"].data.output["distance_to_image_plane"][0],
-                scene["tiled_camera"].data.output["depth"][0, ..., 0],
+                scene["tiled_camera"].data.output["distance_to_image_plane"][0, ..., 0],
                 scene["raycast_camera"].data.output["distance_to_image_plane"][0],
             ]
             save_images_grid(
