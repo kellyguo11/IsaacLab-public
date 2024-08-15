@@ -299,14 +299,14 @@ class ShadowHandEnv(DirectRLEnv):
                 unscale(self.hand_dof_pos, self.hand_dof_lower_limits, self.hand_dof_upper_limits),  # 0:24
                 self.cfg.vel_obs_scale * self.hand_dof_vel,  # 24:48
                 # # object
-                # self.object_pos,  # 48:51 !!!
-                # self.object_rot,  # 51:55 !!!
-                # self.object_linvel,  # 55:58 !!!
-                # self.cfg.vel_obs_scale * self.object_angvel,  # 58:61 !!! 07_30_11_14_22, 07_30_22_18_29 (new CNN without maxpool)
+                self.object_pos,  # 48:51 !!!
+                self.object_rot,  # 51:55 !!!
+                self.object_linvel,  # 55:58 !!!
+                self.cfg.vel_obs_scale * self.object_angvel,  # 58:61 !!! 07_30_11_14_22, 07_30_22_18_29 (new CNN without maxpool)
                 # goal
                 self.in_hand_pos,  # 61:64
                 self.goal_rot,  # 64:68
-                # quat_mul(self.object_rot, quat_conjugate(self.goal_rot)),  # 68:72 07-31_09-38-31 (same new CNN)
+                quat_mul(self.object_rot, quat_conjugate(self.goal_rot)),  # 68:72 07-31_09-38-31 (same new CNN)
                 # fingertips
                 self.fingertip_pos.view(self.num_envs, self.num_fingertips * 3),  # 72:87
                 self.fingertip_rot.view(self.num_envs, self.num_fingertips * 4),  # 87:107
