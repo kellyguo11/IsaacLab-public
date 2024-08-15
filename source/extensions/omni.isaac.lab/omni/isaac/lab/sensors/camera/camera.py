@@ -40,9 +40,11 @@ class Camera(SensorBase):
 
     Summarizing from the `replicator extension`_, the following sensor types are supported:
 
-    - ``"rgb"``: A rendered color image.
+    - ``"rgb"``: A 3-channel rendered color image.
+    - ``"rgba"``: A 4-channel rendered color image with alpha channel.
     - ``"distance_to_camera"``: An image containing the distance to camera optical center.
     - ``"distance_to_image_plane"``: An image containing distances of 3D points from camera plane along camera's z-axis.
+    - ``"depth"``: The same as ``"distance_to_image_plane"``.
     - ``"normals"``: An image containing the local surface normal vectors at each pixel.
     - ``"motion_vectors"``: An image containing the motion vector data at each pixel.
     - ``"semantic_segmentation"``: The semantic segmentation data.

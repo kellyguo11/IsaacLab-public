@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 
 class TiledCamera(Camera):
-    r"""The tiled rendering based camera sensor for acquiring RGBA and depth data.
+    r"""The tiled rendering based camera sensor for acquiring the same data as the Camera class.
 
     This class inherits from the :class:`Camera` class but uses the tiled-rendering API to acquire
     the visual data. Tiled-rendering concatenates the rendered images from multiple cameras into a single image.
@@ -38,8 +38,30 @@ class TiledCamera(Camera):
     The following sensor types are supported:
 
     - ``"rgb"``: A 3-channel rendered color image.
-    - ``"rgba"``: A 4-channel rendered color image.
-    - ``"depth"``: An image containing the distance to camera optical center.
+    - ``"rgba"``: A 4-channel rendered color image with alpha channel.
+    - ``"distance_to_camera"``: An image containing the distance to camera optical center.
+    - ``"distance_to_image_plane"``: An image containing distances of 3D points from camera plane along camera's z-axis.
+    - ``"depth"``: The same as ``"distance_to_image_plane"``.
+    - ``"normals"``: An image containing the local surface normal vectors at each pixel.
+    - ``"motion_vectors"``: An image containing the motion vector data at each pixel.
+    - ``"semantic_segmentation"``: The semantic segmentation data.
+    - ``"instance_segmentation_fast"``: The instance segmentation data.
+    - ``"instance_id_segmentation_fast"``: The instance id segmentation data.
+
+    .. note::
+        Currently the following sensor types are not supported in a "view" format:
+
+        - ``"instance_segmentation"``: The instance segmentation data. Please use the fast counterparts instead.
+        - ``"instance_id_segmentation"``: The instance id segmentation data. Please use the fast counterparts instead.
+        - ``"bounding_box_2d_tight"``: The tight 2D bounding box data (only contains non-occluded regions).
+        - ``"bounding_box_2d_tight_fast"``: The tight 2D bounding box data (only contains non-occluded regions).
+        - ``"bounding_box_2d_loose"``: The loose 2D bounding box data (contains occluded regions).
+        - ``"bounding_box_2d_loose_fast"``: The loose 2D bounding box data (contains occluded regions).
+        - ``"bounding_box_3d"``: The 3D view space bounding box data.
+        - ``"bounding_box_3d_fast"``: The 3D view space bounding box data.
+
+    .. _replicator extension: https://docs.omniverse.nvidia.com/extensions/latest/ext_replicator/annotators_details.html#annotator-output
+    .. _USDGeom Camera: https://graphics.pixar.com/usd/docs/api/class_usd_geom_camera.html
 
     .. versionadded:: v1.0.0
 

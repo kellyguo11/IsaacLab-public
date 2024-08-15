@@ -7,7 +7,7 @@ Changelog
 Added
 ^^^^^
 
-* Added additional annotators for :class:`omni.isaac.lab.sensors.camera.tiled_camera` class.
+* Added additional annotators for :class:`omni.isaac.lab.sensors.camera.TiledCamera` class.
 
 
 Changed
@@ -16,6 +16,7 @@ Changed
 * Updated :class:`omni.isaac.lab.sensors.TiledCamera` to latest RTX tiled rendering API.
 * Single channel outputs for :class:`omni.isaac.lab.sensors.TiledCamera`, :class:`omni.isaac.lab.sensors.Camera` and :class:`omni.isaac.lab.sensors.RayCasterCamera` now has shape (H, W, 1).
 * Data type for RGB output for :class:`omni.isaac.lab.sensors.TiledCamera` changed from ``torch.float`` to ``torch.uint8``.
+* Dimension of RGB output for :class:`omni.isaac.lab.sensors.Camera` changed from (H, W, 4) to (H, W, 3). Use type ``rgba`` to retrieve the previous dimension.
 
 
 0.21.1 (2024-08-06)
