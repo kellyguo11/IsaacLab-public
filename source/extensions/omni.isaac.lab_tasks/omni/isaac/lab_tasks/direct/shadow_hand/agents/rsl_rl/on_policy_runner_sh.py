@@ -9,6 +9,7 @@ import time
 import torch
 from collections import deque
 from torch.utils.tensorboard import SummaryWriter as TensorboardSummaryWriter
+import torch.distributed as dist
 
 import rsl_rl
 from rsl_rl.algorithms import PPO
@@ -24,6 +25,19 @@ class OnPolicyRunnerSH(OnPolicyRunner):
     """On-policy runner for training and evaluation."""
 
     def __init__(self, env: VecEnv, train_cfg, log_dir=None, device="cpu"):
+        self.device = device
+        self.distributed = False
+        # check for distributed multi-GPU training
+        self.world_size = int(os.getenv("WORLD_SIZE", "1"))  # Total number of processes
+        self.rank = int(os.getenv("RANK", "0"))  # Global rank of this process
+        self.local_rank = int(os.getenv("LOCAL_RANK", "0")) # local rank of the process 
+        # distributed multi-GPU training settings
+        if self.world_size > 1:
+            self.distributed = True
+            dist.init_process_group("nccl", rank=self.rank, world_size=self.world_size)
+            self.device = f"cuda:{self.local_rank}"
+            torch.cuda.set_device(self.local_rank)
+
         self.cfg = train_cfg
         self.alg_cfg = train_cfg["algorithm"]
         self.policy_cfg = train_cfg["policy"]
@@ -375,9 +389,17 @@ class OnPolicyRunnerSH(OnPolicyRunner):
         policy = self.alg.actor_critic.act_inference
         if self.cfg["empirical_normalization"]:
             if device is not None:
-                if self.
-                self.obs_normalizer.to(device)
-            policy = lambda x: self.alg.actor_critic.act_inference(self.obs_normalizer(x))  # noqa: E731
+                if isinstance(self.obs_normalizer, dict):
+                    for name, normalizer in self.obs_normalizer.items():
+                        self.obs_normalizer[name] = normalizer.to(device)
+                    def normalize(x):
+                        for name, normalizer in self.obs_normalizer.items():
+                            x[name] = normalizer(x[name])
+                        return x
+                    policy = lambda x: self.alg.actor_critic.act_inference(normalize(x))
+                else:
+                    self.obs_normalizer.to(device)
+                    policy = lambda x: self.alg.actor_critic.act_inference(self.obs_normalizer(x))  # noqa: E731
         return policy
 
     def train_mode(self):
