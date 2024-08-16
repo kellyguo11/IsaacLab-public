@@ -77,6 +77,7 @@ class ShadowHandCameraFFPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     experiment_name = "shadow_hand_cnn"
     empirical_normalization = True
     policy = RslRlPpoActorCriticCfg(
+        class_name="ActorCriticSH",
         init_noise_std=1.0,
         actor_hidden_dims=[512, 512, 256, 128],
         critic_hidden_dims=[512, 512, 256, 128],

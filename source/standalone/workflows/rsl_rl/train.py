@@ -62,6 +62,8 @@ torch.backends.cudnn.allow_tf32 = True
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
+from omni.isaac.lab_tasks.direct.shadow_hand.agents.rsl_rl.on_policy_runner_sh import OnPolicyRunnerSH
+
 
 def main():
     """Train with RSL-RL agent."""
@@ -102,7 +104,8 @@ def main():
     env = RslRlVecEnvWrapper(env)
 
     # create runner from rsl-rl
-    runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
+    # runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
+    runner = OnPolicyRunnerSH(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
     # write git state to logs
     runner.add_git_repo_to_log(__file__)
     # save resume path before creating a new log_dir

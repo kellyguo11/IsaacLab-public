@@ -42,7 +42,7 @@ class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
         # offset=TiledCameraCfg.OffsetCfg(pos=(0.0, -0.27, 1.5), rot=(0.0, 0.0, 0.0, -1.0), convention="opengl"),
         # offset=TiledCameraCfg.OffsetCfg(pos=(-0.1, -0.9, 0.92), rot=(0.866, 0.5, 0.0, 0.0), convention="opengl"),
         # offset=TiledCameraCfg.OffsetCfg(pos=(-0.9, -0.3, 0.6), rot=(-0.5, -0.5, 0.5, 0.5), convention="opengl"),
-        data_types=["rgb", "depth"],
+        data_types=["rgb", "depth", "semantic_segmentation"],
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
         ),
@@ -51,10 +51,12 @@ class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
     )
     write_image_to_file = True
 
-    # env
-    num_channels = 3
-    num_observations = 157-17+27+24+24#649#536 #num_channels * tiled_camera.height * tiled_camera.width #+ 157
-    num_states = 187
+    # # env
+    # num_channels = 3
+    # num_observations = 157-17+27+24+24#649#536 #num_channels * tiled_camera.height * tiled_camera.width #+ 157
+    # num_states = 187
+    num_observations = 512 * 4
+    num_states = 512 * 4
 
 
 @configclass
@@ -126,7 +128,7 @@ class ShadowHandCameraEnv(InHandManipulationEnv):
     def __init__(self, cfg: ShadowHandRGBCameraEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         # self.goal_pos[:, :] = torch.tensor([-0.15, -0.15, 0.5], device=self.device)
-        self._get_embeddings_model()
+        # self._get_embeddings_model()
         # hide goal cubes
         self.goal_pos[:, :] = torch.tensor([-0.2, -0.45, 10.0], device=self.device)
 
@@ -144,6 +146,69 @@ class ShadowHandCameraEnv(InHandManipulationEnv):
         # add lights
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
+
+    # def _configure_gym_env_spaces(self):
+    #     """Configure the action and observation spaces for the Gym environment."""
+    #     # observation space (unbounded since we don't impose any limits)
+    #     self.num_actions = self.cfg.num_actions
+    #     self.num_observations = 512 * 4#{"rgb": 512, "depth": 512, "segmentation": 512, "sim_states": 140}
+    #     self.num_states = 512 * 4#{"rgb": 512, "depth": 512, "segmentation": 512, "sim_states": 187}
+
+    #     # set up spaces
+    #     self.single_observation_space = gym.spaces.Dict()
+    #     self.single_observation_space["policy"] = {
+    #         "rgb": gym.spaces.Box(
+    #             low=-np.inf,
+    #             high=np.inf,
+    #             shape=(self.cfg.tiled_camera.height, self.cfg.tiled_camera.width, 3),
+    #         ),
+    #         "depth": gym.spaces.Box(
+    #             low=-np.inf,
+    #             high=np.inf,
+    #             shape=(self.cfg.tiled_camera.height, self.cfg.tiled_camera.width, 1),
+    #         ),
+    #         "segmentation": gym.spaces.Box(
+    #             low=-np.inf,
+    #             high=np.inf,
+    #             shape=(self.cfg.tiled_camera.height, self.cfg.tiled_camera.width, 4),
+    #         ),
+    #         "sim_states": gym.spaces.Box(
+    #             low=-np.inf,
+    #             high=np.inf,
+    #             shape=(140),
+    #         )
+    #     }
+    #     self.single_observation_space["critic"] = {
+    #         "rgb": gym.spaces.Box(
+    #             low=-np.inf,
+    #             high=np.inf,
+    #             shape=(self.cfg.tiled_camera.height, self.cfg.tiled_camera.width, 3),
+    #         ),
+    #         "depth": gym.spaces.Box(
+    #             low=-np.inf,
+    #             high=np.inf,
+    #             shape=(self.cfg.tiled_camera.height, self.cfg.tiled_camera.width, 1),
+    #         ),
+    #         "segmentation": gym.spaces.Box(
+    #             low=-np.inf,
+    #             high=np.inf,
+    #             shape=(self.cfg.tiled_camera.height, self.cfg.tiled_camera.width, 4),
+    #         ),
+    #         "sim_states": gym.spaces.Box(
+    #             low=-np.inf,
+    #             high=np.inf,
+    #             shape=(187),
+    #         )
+    #     }
+    #     self.single_action_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_actions,))
+
+    #     # batch the spaces for vectorized environments
+    #     self.observation_space = gym.vector.utils.batch_space(self.single_observation_space, self.num_envs)
+    #     self.action_space = gym.vector.utils.batch_space(self.single_action_space, self.num_envs)
+
+    #     # RL specifics
+    #     self.actions = torch.zeros(self.num_envs, self.num_actions, device=self.sim.device)
+
 
     def _get_embeddings_model(self):
         self.trainer = Trainer(self.device)
@@ -215,17 +280,27 @@ class ShadowHandCameraEnv(InHandManipulationEnv):
         return obs
 
     def _get_observations(self) -> dict:
-        state_obs = self.compute_state_observations()
-        embedding_obs = self.compute_embeddings_observations()
-        obs = torch.cat(
-            (state_obs, embedding_obs), dim=-1
-        )
+        sim_obs = self.compute_state_observations()
+        # embedding_obs = self.compute_embeddings_observations()
+        # obs = torch.cat(
+        #     (state_obs, embedding_obs), dim=-1
+        # )
+
+        rgb_img = self._tiled_camera.data.output["rgb"].clone() / 255.0
+        depth_img = self._tiled_camera.data.output["depth"].clone()
+        depth_img[depth_img==float("inf")] = 0
+        depth_img /= 5.0
+        depth_img /= torch.max(depth_img)
+        segmentation_img = self._tiled_camera.data.output["semantic_segmentation"].clone() / 255.0
+
+        obs = {"rgb": rgb_img, "depth": depth_img, "segmentation": segmentation_img, "sim_states": sim_obs}
 
         self.fingertip_force_sensors = self.hand.root_physx_view.get_link_incoming_joint_force()[
             :, self.finger_bodies
         ]
-        state = self.compute_full_state()
-        observations = {"policy": obs, "critic": state}
+        states = self.compute_full_state()
+        state_obs = {"rgb": rgb_img, "depth": depth_img, "segmentation": segmentation_img, "sim_states": states}
+        observations = {"policy": obs, "critic": state_obs}
         return observations
         # if self.cfg.asymmetric_obs:
         #     self.fingertip_force_sensors = self.hand.root_physx_view.get_link_incoming_joint_force()[
