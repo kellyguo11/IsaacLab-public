@@ -78,7 +78,7 @@ def raycast_mesh_kernel(
 @wp.kernel
 def reshape_tiled_image(
     tiled_image_buffer: Any,
-    batched_image: wp.array(dtype=float, ndim=4),
+    batched_image: Any,
     image_height: int,
     image_width: int,
     num_channels: int,
@@ -113,8 +113,21 @@ def reshape_tiled_image(
 
     # copy the pixel values into the batched image
     for i in range(num_channels):
-        batched_image[camera_id, height_id, width_id, i] = wp.float32(tiled_image_buffer[pixel_start + i])
+        batched_image[camera_id, height_id, width_id, i] = batched_image.dtype(tiled_image_buffer[pixel_start + i])
 
 
-wp.overload(reshape_tiled_image, {"tiled_image_buffer": wp.array(dtype=wp.uint8)})
-wp.overload(reshape_tiled_image, {"tiled_image_buffer": wp.array(dtype=wp.float32)})
+# uint32 -> int32 conversion is required for non-colored segmentation annotators
+wp.overload(
+    reshape_tiled_image,
+    {"tiled_image_buffer": wp.array(dtype=wp.uint32), "batched_image": wp.array(dtype=wp.uint32, ndim=4)},
+)
+# uint8 is used for 4 channel annotators
+wp.overload(
+    reshape_tiled_image,
+    {"tiled_image_buffer": wp.array(dtype=wp.uint8), "batched_image": wp.array(dtype=wp.uint8, ndim=4)},
+)
+# float32 is used for single channel annotators
+wp.overload(
+    reshape_tiled_image,
+    {"tiled_image_buffer": wp.array(dtype=wp.float32), "batched_image": wp.array(dtype=wp.float32, ndim=4)},
+)
