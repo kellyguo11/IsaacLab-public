@@ -23,7 +23,7 @@ from omni.isaac.lab.sim.spawners.materials.physics_materials_cfg import RigidBod
 from omni.isaac.lab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from omni.isaac.lab.utils import configclass
 
-from .shadow_hand_env import ShadowHandEnv, unscale
+from omni.isaac.lab_tasks.direct.inhand_manipulation.inhand_manipulation_env import InHandManipulationEnv, unscale
 from .shadow_hand_env_cfg import ShadowHandEnvCfg
 from .models import Trainer
 
@@ -120,10 +120,10 @@ class ShadowHandDepthCameraAsymmetricEnvCfg(ShadowHandDepthCameraEnvCfg):
 
     
 
-class ShadowHandCameraEnv(ShadowHandEnv):
-    cfg: ShadowHandEnvCfg
+class ShadowHandCameraEnv(InHandManipulationEnv):
+    cfg: ShadowHandRGBCameraEnvCfg
 
-    def __init__(self, cfg: ShadowHandEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: ShadowHandRGBCameraEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         # self.goal_pos[:, :] = torch.tensor([-0.15, -0.15, 0.5], device=self.device)
         self._get_embeddings_model()
@@ -150,7 +150,7 @@ class ShadowHandCameraEnv(ShadowHandEnv):
         
     
     def compute_embeddings_observations(self):
-        rgb_img = self._tiled_camera.data.output["rgb"].clone()
+        rgb_img = self._tiled_camera.data.output["rgb"].clone() / 255.0
         mean_tensor = torch.mean(rgb_img, dim=(1, 2), keepdim=True)
         rgb_img -= mean_tensor
         depth_img = self._tiled_camera.data.output["depth"].clone()
