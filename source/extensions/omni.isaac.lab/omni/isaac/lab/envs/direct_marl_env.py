@@ -27,26 +27,23 @@ from omni.isaac.lab.sim import SimulationContext
 from omni.isaac.lab.utils.noise import NoiseModel
 from omni.isaac.lab.utils.timer import Timer
 
-from .common import VecEnvObs, VecEnvStepReturn
-from .direct_rl_env_cfg import DirectRLEnvCfg
+from .common import ActionType, AgentID, EnvStepReturn, ObsType, StateType
+from .direct_marl_env_cfg import DirectMARLEnvCfg
 from .ui import ViewportCameraController
 
 
-class DirectRLEnv(gym.Env):
-    """The superclass for the direct workflow to design environments.
+class DirectMARLEnv:
+    """The superclass for the direct workflow to design multi-agent environments.
 
-    This class implements the core functionality for reinforcement learning (RL)
+    This class implements the core functionality for multi-agent reinforcement learning (MARL)
     environments. It is designed to be used with any RL library. The class is designed
     to be used with vectorized environments, i.e., the environment is expected to be run
     in parallel with multiple sub-environments.
 
+    The design of this class is based on the PettingZoo Parallel API.
     While the environment itself is implemented as a vectorized environment, we do not
-    inherit from :class:`gym.vector.VectorEnv`. This is mainly because the class adds
-    various methods (for wait and asynchronous updates) which are not required.
-    Additionally, each RL library typically has its own definition for a vectorized
-    environment. Thus, to reduce complexity, we directly use the :class:`gym.Env` over
-    here and leave it up to library-defined wrappers to take care of wrapping this
-    environment for their agents.
+    inherit from :class:`pettingzoo.ParallelEnv` or :class:`gym.vector.VectorEnv`. This is mainly
+    because the class adds various attributes and methods that are inconsistent with them.
 
     Note:
         For vectorized environments, it is recommended to **only** call the :meth:`reset`
@@ -57,15 +54,13 @@ class DirectRLEnv(gym.Env):
 
     """
 
-    is_vector_env: ClassVar[bool] = True
-    """Whether the environment is a vectorized environment."""
     metadata: ClassVar[dict[str, Any]] = {
         "render_modes": [None, "human", "rgb_array"],
         "isaac_sim_version": get_version(),
     }
     """Metadata for the environment."""
 
-    def __init__(self, cfg: DirectRLEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: DirectMARLEnvCfg, render_mode: str | None = None, **kwargs):
         """Initialize the environment.
 
         Args:
@@ -152,7 +147,7 @@ class DirectRLEnv(gym.Env):
             self._window = None
 
         # allocate dictionary to store metrics
-        self.extras = {}
+        self.extras = {agent: {} for agent in self.cfg.possible_agents}
 
         # initialize data and constants
         # -- counter for simulation steps
@@ -161,23 +156,28 @@ class DirectRLEnv(gym.Env):
         self.common_step_counter = 0
         # -- init buffers
         self.episode_length_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.long)
-        self.reset_terminated = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
-        self.reset_time_outs = torch.zeros_like(self.reset_terminated)
         self.reset_buf = torch.zeros(self.num_envs, dtype=torch.bool, device=self.sim.device)
-        self.actions = torch.zeros(self.num_envs, self.cfg.num_actions, device=self.sim.device)
+        self.actions = {
+            agent: torch.zeros(self.num_envs, self.cfg.num_actions[agent], device=self.sim.device)
+            for agent in self.cfg.possible_agents
+        }
 
-        # setup the action and observation spaces for Gym
-        self._configure_gym_env_spaces()
+        # setup the observation, state and action spaces
+        self._configure_env_spaces()
 
         # setup noise cfg for adding action and observation noise
         if self.cfg.action_noise_model:
-            self._action_noise_model: NoiseModel = self.cfg.action_noise_model.class_type(
-                self.num_envs, self.cfg.action_noise_model, self.device
-            )
+            self._action_noise_model: dict[AgentID, NoiseModel] = {
+                agent: noise_model.class_type(self.num_envs, noise_model, self.device)
+                for agent, noise_model in self.cfg.action_noise_model.items()
+                if noise_model is not None
+            }
         if self.cfg.observation_noise_model:
-            self._observation_noise_model: NoiseModel = self.cfg.observation_noise_model.class_type(
-                self.num_envs, self.cfg.observation_noise_model, self.device
-            )
+            self._observation_noise_model: dict[AgentID, NoiseModel] = {
+                agent: noise_model.class_type(self.num_envs, noise_model, self.device)
+                for agent, noise_model in self.cfg.observation_noise_model.items()
+                if noise_model is not None
+            }
 
         # perform events at the start of the simulation
         if self.cfg.events:
@@ -199,6 +199,27 @@ class DirectRLEnv(gym.Env):
     def num_envs(self) -> int:
         """The number of instances of the environment that are running."""
         return self.scene.num_envs
+
+    @property
+    def num_agents(self) -> int:
+        """Number of current agents.
+
+        The number of current agents may change as the environment progresses (e.g.: agents can be added or removed).
+        """
+        return len(self.agents)
+
+    @property
+    def max_num_agents(self) -> int:
+        """Number of all possible agents the environment can generate.
+
+        This value remains constant as the environment progresses.
+        """
+        return len(self.possible_agents)
+
+    @property
+    def unwrapped(self) -> DirectMARLEnv:
+        """Get the unwrapped environment underneath all the layers of wrappers."""
+        return self
 
     @property
     def physics_dt(self) -> float:
@@ -232,10 +253,32 @@ class DirectRLEnv(gym.Env):
         return math.ceil(self.max_episode_length_s / (self.cfg.sim.dt * self.cfg.decimation))
 
     """
+    Space methods
+    """
+
+    def observation_space(self, agent: AgentID) -> gym.Space:
+        """Get the observation space for the specified agent.
+
+        Returns:
+            The agent's observation space.
+        """
+        return self.observation_spaces[agent]
+
+    def action_space(self, agent: AgentID) -> gym.Space:
+        """Get the action space for the specified agent.
+
+        Returns:
+            The agent's action space.
+        """
+        return self.action_spaces[agent]
+
+    """
     Operations.
     """
 
-    def reset(self, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[VecEnvObs, dict]:
+    def reset(
+        self, seed: int | None = None, options: dict[str, Any] | None = None
+    ) -> tuple[dict[AgentID, ObsType], dict[AgentID, dict]]:
         """Resets all the environments and returns observations.
 
         Args:
@@ -246,26 +289,30 @@ class DirectRLEnv(gym.Env):
                     This argument is used for compatibility with Gymnasium environment definition.
 
         Returns:
-            A tuple containing the observations and extras.
+            A tuple containing the observations and extras (keyed by the agent ID).
         """
         # set the seed
         if seed is not None:
             self.seed(seed)
+
         # reset state of scene
         indices = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
         self._reset_idx(indices)
 
-        obs = self._get_observations()
-        # return observations
-        return obs, self.extras
+        # update observations and the list of current agents (sorted as in possible_agents)
+        self.obs_dict = self._get_observations()
+        self.agents = [agent for agent in self.possible_agents if agent in self.obs_dict]
 
-    def step(self, action: torch.Tensor) -> VecEnvStepReturn:
+        # return observations
+        return self.obs_dict, self.extras
+
+    def step(self, actions: dict[AgentID, ActionType]) -> EnvStepReturn:
         """Execute one time-step of the environment's dynamics.
 
         The environment steps forward at a fixed time-step, while the physics simulation is decimated at a
         lower time-step. This is to ensure that the simulation is stable. These two time-steps can be configured
-        independently using the :attr:`DirectRLEnvCfg.decimation` (number of simulation steps per environment step)
-        and the :attr:`DirectRLEnvCfg.sim.physics_dt` (physics time-step). Based on these parameters, the environment
+        independently using the :attr:`DirectMARLEnvCfg.decimation` (number of simulation steps per environment step)
+        and the :attr:`DirectMARLEnvCfg.sim.physics_dt` (physics time-step). Based on these parameters, the environment
         time-step is computed as the product of the two.
 
         This function performs the following steps:
@@ -278,18 +325,21 @@ class DirectRLEnv(gym.Env):
         6. Compute observations.
 
         Args:
-            action: The actions to apply on the environment. Shape is (num_envs, action_dim).
+            actions: The actions to apply on the environment (keyed by the agent ID).
+                Shape of individual tensors is (num_envs, action_dim).
 
         Returns:
-            A tuple containing the observations, rewards, resets (terminated and truncated) and extras.
+            A tuple containing the observations, rewards, resets (terminated and truncated) and extras (keyed by the agent ID).
         """
-        action = action.to(self.device)
+        actions = {agent: action.to(self.device) for agent, action in actions.items()}
+
         # add action noise
         if self.cfg.action_noise_model:
-            action = self._action_noise_model.apply(action)
-
+            for agent, action in actions.items():
+                if agent in self._action_noise_model:
+                    actions[agent] = self._action_noise_model[agent].apply(action)
         # process actions
-        self._pre_physics_step(action)
+        self._pre_physics_step(actions)
 
         # check if we need to do rendering within the physics loop
         # note: checked here once to avoid multiple checks within the loop
@@ -317,9 +367,9 @@ class DirectRLEnv(gym.Env):
         self.episode_length_buf += 1  # step in current episode (per env)
         self.common_step_counter += 1  # total step (common for all envs)
 
-        self.reset_terminated[:], self.reset_time_outs[:] = self._get_dones()
-        self.reset_buf = self.reset_terminated | self.reset_time_outs
-        self.reward_buf = self._get_rewards()
+        self.terminated_dict, self.time_out_dict = self._get_dones()
+        self.reset_buf[:] = math.prod(self.terminated_dict.values()) | math.prod(self.time_out_dict.values())
+        self.reward_dict = self._get_rewards()
 
         # -- reset envs that terminated/timed-out and log the episode information
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
@@ -331,16 +381,38 @@ class DirectRLEnv(gym.Env):
             if "interval" in self.event_manager.available_modes:
                 self.event_manager.apply(mode="interval", dt=self.step_dt)
 
-        # update observations
-        self.obs_buf = self._get_observations()
+        # update observations and the list of current agents (sorted as in possible_agents)
+        self.obs_dict = self._get_observations()
+        self.agents = [agent for agent in self.possible_agents if agent in self.obs_dict]
 
         # add observation noise
-        # note: we apply no noise to the state space (since it is used for critic networks)
+        # note: we apply no noise to the state space (since it is used for centralized training or critic networks)
         if self.cfg.observation_noise_model:
-            self.obs_buf["policy"] = self._observation_noise_model.apply(self.obs_buf["policy"])
+            for agent, obs in self.obs_dict.items():
+                if agent in self._observation_noise_model:
+                    self.obs_dict[agent] = self._observation_noise_model[agent].apply(obs)
 
         # return observations, rewards, resets and extras
-        return self.obs_buf, self.reward_buf, self.reset_terminated, self.reset_time_outs, self.extras
+        return self.obs_dict, self.reward_dict, self.terminated_dict, self.time_out_dict, self.extras
+
+    def state(self) -> StateType | None:
+        """Returns the state for the environment.
+
+        The state-space is used for centralized training or asymmetric actor-critic architectures. It is configured
+        using the :attr:`DirectMARLEnvCfg.num_states` parameter.
+
+        Returns:
+            The states for the environment, or None if :attr:`DirectMARLEnvCfg.num_states` parameter is zero.
+        """
+        if not self.cfg.num_states:
+            return None
+        # concatenate and return the observations as state
+        if self.cfg.num_states < 0:
+            self.state_buf = torch.cat([self.obs_dict[agent] for agent in self.cfg.possible_agents], dim=-1)
+        # compute and return custom environment state
+        else:
+            self.state_buf = self._get_states()
+        return self.state_buf
 
     @staticmethod
     def seed(seed: int = -1) -> int:
@@ -416,7 +488,7 @@ class DirectRLEnv(gym.Env):
             # convert to numpy array
             rgb_data = np.frombuffer(rgb_data, dtype=np.uint8).reshape(*rgb_data.shape)
             # return the rgb data
-            # note: initially the renerer is warming up and returns empty data
+            # note: initially the renderer is warming up and returns empty data
             if rgb_data.size == 0:
                 return np.zeros((self.cfg.viewer.resolution[1], self.cfg.viewer.resolution[0], 3), dtype=np.uint8)
             else:
@@ -484,28 +556,30 @@ class DirectRLEnv(gym.Env):
     Helper functions.
     """
 
-    def _configure_gym_env_spaces(self):
-        """Configure the action and observation spaces for the Gym environment."""
-        # observation space (unbounded since we don't impose any limits)
-        self.num_actions = self.cfg.num_actions
-        self.num_observations = self.cfg.num_observations
-        self.num_states = self.cfg.num_states
+    def _configure_env_spaces(self):
+        """Configure the spaces for the environment."""
+        self.agents = self.cfg.possible_agents
+        self.possible_agents = self.cfg.possible_agents
 
-        # set up spaces
-        self.single_observation_space = gym.spaces.Dict()
-        self.single_observation_space["policy"] = gym.spaces.Box(
-            low=-np.inf, high=np.inf, shape=(self.num_observations,)
-        )
-        self.single_action_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_actions,))
+        # set up observation and action spaces
+        self.observation_spaces = {
+            agent: gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.cfg.num_observations[agent],))
+            for agent in self.cfg.possible_agents
+        }
+        self.action_spaces = {
+            agent: gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.cfg.num_actions[agent],))
+            for agent in self.cfg.possible_agents
+        }
 
-        # batch the spaces for vectorized environments
-        self.observation_space = gym.vector.utils.batch_space(self.single_observation_space["policy"], self.num_envs)
-        self.action_space = gym.vector.utils.batch_space(self.single_action_space, self.num_envs)
-
-        # optional state space for asymmetric actor-critic architectures
-        if self.num_states > 0:
-            self.single_observation_space["critic"] = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_states,))
-            self.state_space = gym.vector.utils.batch_space(self.single_observation_space["critic"], self.num_envs)
+        # set up state space
+        if not self.cfg.num_states:
+            self.state_space = None
+        if self.cfg.num_states < 0:
+            self.state_space = gym.spaces.Box(
+                low=-np.inf, high=np.inf, shape=(sum(self.cfg.num_observations.values()),)
+            )
+        else:
+            self.state_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.cfg.num_states,))
 
     def _reset_idx(self, env_ids: Sequence[int]):
         """Reset environments based on specified indices.
@@ -523,9 +597,11 @@ class DirectRLEnv(gym.Env):
 
         # reset noise models
         if self.cfg.action_noise_model:
-            self._action_noise_model.reset(env_ids)
+            for noise_model in self._action_noise_model.values():
+                noise_model.reset(env_ids)
         if self.cfg.observation_noise_model:
-            self._observation_noise_model.reset(env_ids)
+            for noise_model in self._observation_noise_model.values():
+                noise_model.reset(env_ids)
 
         # reset the episode length buffer
         self.episode_length_buf[env_ids] = 0
@@ -547,14 +623,15 @@ class DirectRLEnv(gym.Env):
         pass
 
     @abstractmethod
-    def _pre_physics_step(self, actions: torch.Tensor):
+    def _pre_physics_step(self, actions: dict[AgentID, ActionType]):
         """Pre-process actions before stepping through the physics.
 
         This function is responsible for pre-processing the actions before stepping through the physics.
         It is called before the physics stepping (which is decimated).
 
         Args:
-            actions: The actions to apply on the environment. Shape is (num_envs, action_dim).
+            actions: The actions to apply on the environment (keyed by the agent ID).
+                Shape of individual tensors is (num_envs, action_dim).
         """
         raise NotImplementedError(f"Please implement the '_pre_physics_step' method for {self.__class__.__name__}.")
 
@@ -568,41 +645,42 @@ class DirectRLEnv(gym.Env):
         raise NotImplementedError(f"Please implement the '_apply_action' method for {self.__class__.__name__}.")
 
     @abstractmethod
-    def _get_observations(self) -> VecEnvObs:
+    def _get_observations(self) -> dict[AgentID, ObsType]:
         """Compute and return the observations for the environment.
 
         Returns:
-            The observations for the environment.
+            The observations for the environment (keyed by the agent ID).
         """
         raise NotImplementedError(f"Please implement the '_get_observations' method for {self.__class__.__name__}.")
 
-    def _get_states(self) -> VecEnvObs | None:
+    @abstractmethod
+    def _get_states(self) -> StateType:
         """Compute and return the states for the environment.
 
-        The state-space is used for asymmetric actor-critic architectures. It is configured
-        using the :attr:`DirectRLEnvCfg.num_states` parameter.
+        This method is only called (and therefore has to be implemented) when the :attr:`DirectMARLEnvCfg.num_states`
+        parameter is greater than zero.
 
         Returns:
-            The states for the environment. If the environment does not have a state-space, the function
-            returns a None.
+            The states for the environment.
         """
-        return None  # noqa: R501
+        raise NotImplementedError(f"Please implement the '_get_states' method for {self.__class__.__name__}.")
 
     @abstractmethod
-    def _get_rewards(self) -> torch.Tensor:
+    def _get_rewards(self) -> dict[AgentID, torch.Tensor]:
         """Compute and return the rewards for the environment.
 
         Returns:
-            The rewards for the environment. Shape is (num_envs,).
+            The rewards for the environment (keyed by the agent ID).
+            Shape of individual tensors is (num_envs,).
         """
         raise NotImplementedError(f"Please implement the '_get_rewards' method for {self.__class__.__name__}.")
 
     @abstractmethod
-    def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
+    def _get_dones(self) -> tuple[dict[AgentID, torch.Tensor], dict[AgentID, torch.Tensor]]:
         """Compute and return the done flags for the environment.
 
         Returns:
-            A tuple containing the done flags for termination and time-out.
+            A tuple containing the done flags for termination and time-out (keyed by the agent ID).
             Shape of individual tensors is (num_envs,).
         """
         raise NotImplementedError(f"Please implement the '_get_dones' method for {self.__class__.__name__}.")
