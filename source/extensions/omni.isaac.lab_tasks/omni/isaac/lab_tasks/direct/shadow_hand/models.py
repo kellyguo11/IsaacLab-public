@@ -1,7 +1,10 @@
+import os
 import torch
+import torch.distributed as dist
 import torch.nn as nn
 import torchvision.models as models
 import torchvision.transforms as transforms
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 from omni.isaac.lab.sensors import save_images_to_file
 
@@ -85,12 +88,23 @@ class Trainer:
     def __init__(self, device):
         self.device = device
 
+        distributed = False
+        world_size = int(os.getenv("WORLD_SIZE", "1"))
+        if world_size > 1:
+            distributed = True
+
         # self.rgb_model = ResNet18()
         self.rgb_model = CustomCNN(self.device)
+        if distributed:
+            self.rgb_model = DDP(self.rgb_model)
         self.rgb_model.to(self.device)
         self.rgb_model.train()
         # self.depth_model = CustomCNN(depth=True)
         # self.depth_model.to(self.device)
+
+        if distributed:
+            for param in self.rgb_model.parameters():
+                dist.broadcast(param.data, src=0)
 
         self.rgb_optimizer = torch.optim.Adam(self.rgb_model.parameters(), lr=1e-4)
         self.l2_loss = nn.MSELoss()
