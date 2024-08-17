@@ -1,6 +1,14 @@
 Changelog
 ---------
 
+0.22.0 (2024-08-16)
+~~~~~~~~~~~~~~~~~~~
+
+Added
+^^^^^
+
+* Added direct workflow base class :class:`omni.isaac.lab.envs.DirectMARLEnv` for multi-agent environments.
+
 0.21.2 (2024-08-13)
 ~~~~~~~~~~~~~~~~~~~
 
