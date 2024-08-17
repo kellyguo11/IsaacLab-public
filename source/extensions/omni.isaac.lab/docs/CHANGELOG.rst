@@ -1,6 +1,16 @@
 Changelog
 ---------
 
+
+0.23.0 (2024-08-17)
+~~~~~~~~~~~~~~~~~~~
+
+Added
+^^^^^
+
+* Added direct workflow base class :class:`omni.isaac.lab.envs.DirectMARLEnv` for multi-agent environments.
+
+
 0.22.1 (2024-08-17)
 ~~~~~~~~~~~~~~~~~~~
 
@@ -16,7 +26,7 @@ Added
 ~~~~~~~~~~~~~~~~~~~
 
 Added
-^^^^^^^
+^^^^^
 
 * Added :mod:`~omni.isaac.lab.utils.modifiers` module to provide framework for configurable and custom
   observation data modifiers.
