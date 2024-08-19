@@ -29,6 +29,9 @@ from .models import Trainer
 
 from omni.isaac.lab.utils.math import quat_conjugate, quat_from_angle_axis, quat_mul
 
+import omni.usd
+from pxr import Semantics
+
 
 @configclass
 class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
@@ -55,8 +58,8 @@ class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
     # num_channels = 3
     # num_observations = 157-17+27+24+24#649#536 #num_channels * tiled_camera.height * tiled_camera.width #+ 157
     # num_states = 187
-    num_observations = 512 * 4
-    num_states = 512 * 4
+    num_observations = 256 * 3
+    num_states = 256 * 2
 
 
 @configclass
@@ -137,6 +140,13 @@ class ShadowHandCameraEnv(InHandManipulationEnv):
         self.hand = Articulation(self.cfg.robot_cfg)
         self.object = RigidObject(self.cfg.object_cfg)
         self._tiled_camera = TiledCamera(self.cfg.tiled_camera)
+        # add semantics
+        prim = omni.usd.get_context().get_stage().GetPrimAtPath('/World/envs/env_0/object')
+        sem = Semantics.SemanticsAPI.Apply(prim, "Semantics")
+        sem.CreateSemanticTypeAttr()
+        sem.CreateSemanticDataAttr()
+        sem.GetSemanticTypeAttr().Set('class')
+        sem.GetSemanticDataAttr().Set('cube')
         # clone and replicate (no need to filter for this environment)
         self.scene.clone_environments(copy_from_source=False)
         # add articultion to scene - we must register to scene to randomize with EventManager
@@ -287,19 +297,28 @@ class ShadowHandCameraEnv(InHandManipulationEnv):
         # )
 
         rgb_img = self._tiled_camera.data.output["rgb"].clone() / 255.0
+        # self._save_images("rgb", rgb_img.clone())
+        mean_tensor = torch.mean(rgb_img, dim=(1, 2), keepdim=True)
+        rgb_img -= mean_tensor
         depth_img = self._tiled_camera.data.output["depth"].clone()
         depth_img[depth_img==float("inf")] = 0
         depth_img /= 5.0
         depth_img /= torch.max(depth_img)
+        # self._save_images("depth", depth_img.clone())
         segmentation_img = self._tiled_camera.data.output["semantic_segmentation"].clone() / 255.0
+        # self._save_images("segmentation", segmentation_img.clone())
+        mean_tensor = torch.mean(segmentation_img, dim=(1, 2), keepdim=True)
+        segmentation_img -= mean_tensor
 
-        obs = {"rgb": rgb_img, "depth": depth_img, "segmentation": segmentation_img, "sim_states": sim_obs}
+        rgbd = torch.cat((rgb_img, depth_img), dim=-1)
+
+        obs = {"rgbd": rgbd, "segmentation": segmentation_img, "sim_states": sim_obs}
 
         self.fingertip_force_sensors = self.hand.root_physx_view.get_link_incoming_joint_force()[
             :, self.finger_bodies
         ]
         states = self.compute_full_state()
-        state_obs = {"rgb": rgb_img, "depth": depth_img, "segmentation": segmentation_img, "sim_states": states}
+        state_obs = {"rgbd": rgbd, "sim_states": states}
         observations = {"policy": obs, "critic": state_obs}
         return observations
         # if self.cfg.asymmetric_obs:

@@ -17,7 +17,6 @@ parser = argparse.ArgumentParser(description="Train an RL agent with RL-Games.")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
 parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")
-parser.add_argument("--cpu", action="store_true", default=False, help="Use CPU pipeline.")
 parser.add_argument(
     "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
 )
@@ -123,7 +122,7 @@ def main():
 
     # parse configuration
     env_cfg = parse_env_cfg(
-        args_cli.task, use_gpu=not args_cli.cpu, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
+        args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
     )
 
     agent_cfg = load_cfg_from_registry(args_cli.task, "rl_games_cfg_entry_point")
@@ -143,6 +142,7 @@ def main():
     agent_cfg["params"]["config"]["full_experiment_name"] = log_dir
 
     # multi-gpu training config
+    world_rank = 0
     if args_cli.distributed:
         agent_cfg["params"]["seed"] += app_launcher.global_rank
         agent_cfg["params"]["config"]["device"] = f"cuda:{app_launcher.local_rank}"
@@ -150,6 +150,7 @@ def main():
         agent_cfg["params"]["config"]["multi_gpu"] = True
         # update env config device
         env_cfg.sim.device = f"cuda:{app_launcher.local_rank}"
+        world_rank = app_launcher.global_rank
 
     # max iterations
     if args_cli.max_iterations:
@@ -210,34 +211,35 @@ def main():
     # train the agent
     runner.run({"train": True, "play": False, "sigma": None})
 
-    benchmark.store_measurements()
+    if world_rank == 0:
+        benchmark.store_measurements()
 
-    # parse tensorboard file stats
-    tensorboard_log_dir = os.path.join(log_root_path, log_dir, "summaries")
-    log_data = parse_tf_logs(tensorboard_log_dir)
+        # parse tensorboard file stats
+        tensorboard_log_dir = os.path.join(log_root_path, log_dir, "summaries")
+        log_data = parse_tf_logs(tensorboard_log_dir)
 
-    # prepare RL timing dict
-    rl_training_times = {
-        "Environment only step time": log_data["performance/step_time"],
-        "Environment + Inference step time": log_data["performance/step_inference_time"],
-        "Environment + Inference + Policy update time": log_data["performance/rl_update_time"],
-        "Environment only FPS": log_data["performance/step_fps"],
-        "Environment + Inference FPS": log_data["performance/step_inference_fps"],
-        "Environment + Inference + Policy update FPS": log_data["performance/step_inference_rl_update_fps"],
-    }
+        # prepare RL timing dict
+        rl_training_times = {
+            "Environment only step time": log_data["performance/step_time"],
+            "Environment + Inference step time": log_data["performance/step_inference_time"],
+            "Environment + Inference + Policy update time": log_data["performance/rl_update_time"],
+            "Environment only FPS": log_data["performance/step_fps"],
+            "Environment + Inference FPS": log_data["performance/step_inference_fps"],
+            "Environment + Inference + Policy update FPS": log_data["performance/step_inference_rl_update_fps"],
+        }
 
-    # log additional metrics to benchmark services
-    log_app_start_time(benchmark, (app_start_time_end - app_start_time_begin) / 1e6)
-    log_python_imports_time(benchmark, (imports_time_end - imports_time_begin) / 1e6)
-    log_task_start_time(benchmark, (task_startup_time_end - task_startup_time_begin) / 1e6)
-    log_scene_creation_time(benchmark, Timer.get_timer_info("scene_creation") * 1000)
-    log_simulation_start_time(benchmark, Timer.get_timer_info("simulation_start") * 1000)
-    log_total_start_time(benchmark, (task_startup_time_end - app_start_time_begin) / 1e6)
-    log_runtime_step_times(benchmark, rl_training_times, compute_stats=True)
-    log_rl_policy_rewards(benchmark, log_data["rewards/iter"])
-    log_rl_policy_episode_lengths(benchmark, log_data["episode_lengths/iter"])
+        # log additional metrics to benchmark services
+        log_app_start_time(benchmark, (app_start_time_end - app_start_time_begin) / 1e6)
+        log_python_imports_time(benchmark, (imports_time_end - imports_time_begin) / 1e6)
+        log_task_start_time(benchmark, (task_startup_time_end - task_startup_time_begin) / 1e6)
+        log_scene_creation_time(benchmark, Timer.get_timer_info("scene_creation") * 1000)
+        log_simulation_start_time(benchmark, Timer.get_timer_info("simulation_start") * 1000)
+        log_total_start_time(benchmark, (task_startup_time_end - app_start_time_begin) / 1e6)
+        log_runtime_step_times(benchmark, rl_training_times, compute_stats=True)
+        log_rl_policy_rewards(benchmark, log_data["rewards/iter"])
+        log_rl_policy_episode_lengths(benchmark, log_data["episode_lengths/iter"])
 
-    benchmark.stop()
+        benchmark.stop()
 
     # close the simulator
     env.close()

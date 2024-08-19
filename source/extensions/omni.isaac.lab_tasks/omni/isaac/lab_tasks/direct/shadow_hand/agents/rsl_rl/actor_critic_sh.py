@@ -28,7 +28,7 @@ class CustomCNN(nn.Module):
 
         self.linear = nn.Sequential(
             nn.Linear(128, 256), 
-            nn.Linear(256, 512), 
+            # nn.Linear(256, 512), 
         )
 
     def forward(self, x):
@@ -180,10 +180,10 @@ class ActorCriticSH(ActorCritic):
         if cnn:
             self.actor.heads[name] = CustomCNN(in_dim)
         else:
-            self.actor.heads[name] = nn.Sequential(nn.Linear(in_dim, 512), self.activation)
+            self.actor.heads[name] = nn.Sequential(nn.Linear(in_dim, 256), self.activation)
 
     def add_critic_head(self, name, in_dim, cnn):
         if cnn:
             self.critic.heads[name] = CustomCNN(in_dim)
         else:
-            self.critic.heads[name] = nn.Sequential(nn.Linear(in_dim, 512), self.activation)
+            self.critic.heads[name] = nn.Sequential(nn.Linear(in_dim, 256), self.activation)

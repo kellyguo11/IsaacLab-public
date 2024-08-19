@@ -44,8 +44,8 @@ class OnPolicyRunnerSH(OnPolicyRunner):
         self.device = device
         self.env = env
 
-        num_obs = 512 * 4
-        num_critic_obs = 512 * 4
+        num_obs = 256 * 3
+        num_critic_obs = 256 * 2
 
         actor_critic_class = eval(self.policy_cfg.pop("class_name"))  # ActorCritic
         actor_critic: ActorCritic | ActorCriticRecurrent = actor_critic_class(
@@ -96,7 +96,7 @@ class OnPolicyRunnerSH(OnPolicyRunner):
         print(f"Critic model: {actor_critic.critic}")
 
         alg_class = eval(self.alg_cfg.pop("class_name"))  # PPO
-        self.alg: PPO = alg_class(actor_critic, device=self.device, **self.alg_cfg)
+        self.alg: PPO = alg_class(actor_critic, distributed=self.distributed, device=self.device, **self.alg_cfg)
 
         self.num_steps_per_env = self.cfg["num_steps_per_env"]
         self.save_interval = self.cfg["save_interval"]
@@ -236,20 +236,22 @@ class OnPolicyRunnerSH(OnPolicyRunner):
             stop = time.time()
             learn_time = stop - start
             self.current_learning_iteration = it
-            if self.log_dir is not None:
-                self.log(locals())
-            if it % self.save_interval == 0:
-                self.save(os.path.join(self.log_dir, f"model_{it}.pt"))
-            ep_infos.clear()
-            if it == start_iter:
-                # obtain all the diff files
-                git_file_paths = store_code_state(self.log_dir, self.git_status_repos)
-                # if possible store them to wandb
-                if self.logger_type in ["wandb", "neptune"] and git_file_paths:
-                    for path in git_file_paths:
-                        self.writer.save_file(path)
+            if self.rank == 0:
+                if self.log_dir is not None:
+                    self.log(locals())
+                if it % self.save_interval == 0:
+                    self.save(os.path.join(self.log_dir, f"model_{it}.pt"))
+                ep_infos.clear()
+                if it == start_iter:
+                    # obtain all the diff files
+                    git_file_paths = store_code_state(self.log_dir, self.git_status_repos)
+                    # if possible store them to wandb
+                    if self.logger_type in ["wandb", "neptune"] and git_file_paths:
+                        for path in git_file_paths:
+                            self.writer.save_file(path)
 
-        self.save(os.path.join(self.log_dir, f"model_{self.current_learning_iteration}.pt"))
+        if self.rank == 0:
+            self.save(os.path.join(self.log_dir, f"model_{self.current_learning_iteration}.pt"))
 
     def log(self, locs: dict, width: int = 80, pad: int = 35):
         self.tot_timesteps += self.num_steps_per_env * self.env.num_envs
