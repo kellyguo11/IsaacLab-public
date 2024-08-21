@@ -452,18 +452,12 @@ class Camera(SensorBase):
                 else:
                     device_name = "cpu"
 
-                # Parse special case for RGB/RGBA and depth/distance_to_image_plane alias
-                if name == "rgba":
-                    # create rgb annotator node
-                    rep_annotator = rep.AnnotatorRegistry.get_annotator("rgb", init_params, device=device_name)
-                elif name == "depth":
-                    # create annotator node
-                    rep_annotator = rep.AnnotatorRegistry.get_annotator(
-                        "distance_to_image_plane", init_params, device=device_name
-                    )
-                else:
-                    # create annotator node
-                    rep_annotator = rep.AnnotatorRegistry.get_annotator(name, init_params, device=device_name)
+                # Map special cases to their corresponding annotator names
+                special_cases = {"rgba": "rgb", "depth": "distance_to_image_plane"}
+                # Get the annotator name, falling back to the original name if not a special case
+                annotator_name = special_cases.get(name, name)
+                # Create the annotator node
+                rep_annotator = rep.AnnotatorRegistry.get_annotator(annotator_name, init_params, device=device_name)
 
                 # attach annotator to render product
                 rep_annotator.attach(render_prod_path)
