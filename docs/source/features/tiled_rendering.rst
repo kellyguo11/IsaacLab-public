@@ -9,7 +9,7 @@ Tiled Rendering
 
 .. note::
 
-    This feature is only available from Isaac Sim version 4.0.0 onwards. Annotators in addition to RGB and Depth are available from Isaac Sim version 4.2.0.
+    This feature is only available from Isaac Sim version 4.2.0 onwards.
 
     Tiled rendering in combination with image processing networks require heavy memory resources, especially at larger resolutions. We recommend running at 256 cameras in the scene on RTX 4090 GPUs or similar.
 
