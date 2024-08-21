@@ -1,6 +1,15 @@
 Changelog
 ---------
 
+0.23.1 (2024-08-17)
+~~~~~~~~~~~~~~~~~~~
+
+Changed
+^^^^^^^
+
+* Updated torch to version 2.4.0.
+
+
 0.23.0 (2024-08-16)
 ~~~~~~~~~~~~~~~~~~~
 
@@ -14,7 +23,7 @@ Added
 ~~~~~~~~~~~~~~~~~~~
 
 Added
-^^^^^^^
+^^^^^
 
 * Added :mod:`~omni.isaac.lab.utils.modifiers` module to provide framework for configurable and custom
   observation data modifiers.
