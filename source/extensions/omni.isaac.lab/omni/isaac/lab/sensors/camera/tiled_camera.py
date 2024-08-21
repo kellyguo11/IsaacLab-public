@@ -16,6 +16,7 @@ import carb
 import omni.usd
 import warp as wp
 from omni.isaac.core.prims import XFormPrimView
+from omni.isaac.version import get_version
 from pxr import Usd, UsdGeom
 
 from omni.isaac.lab.utils.warp.kernels import reshape_tiled_image
@@ -65,7 +66,7 @@ class TiledCamera(Camera):
 
     .. versionadded:: v1.0.0
 
-        This feature is available starting from Isaac Sim 4.0. Before this version, the tiled rendering APIs
+        This feature is available starting from Isaac Sim 4.2. Before this version, the tiled rendering APIs
         were not available.
 
     """
@@ -81,8 +82,15 @@ class TiledCamera(Camera):
 
         Raises:
             RuntimeError: If no camera prim is found at the given path.
+            RuntimeError: If Isaac Sim version < 4.2
             ValueError: If the provided data types are not supported by the camera.
         """
+        isaac_sim_version = float(".".join(get_version()[2:4]))
+        if isaac_sim_version < 4.2:
+            raise RuntimeError(
+                f"TiledCamera is only available from Isaac Sim 4.2.0. Current version is {isaac_sim_version}. Please"
+                " update to Isaac Sim 4.2.0"
+            )
         super().__init__(cfg)
 
     def __del__(self):
@@ -259,7 +267,7 @@ class TiledCamera(Camera):
                 or (data_type == "instance_id_segmentation_fast" and self.cfg.colorize_instance_id_segmentation)
             ):
                 tiled_data_buffer = wp.array(
-                    ptr=tiled_data_buffer.ptr, shape=(*tiled_data_buffer.shape, 4), dtype=wp.uint8
+                    ptr=tiled_data_buffer.ptr, shape=(*tiled_data_buffer.shape, 4), dtype=wp.uint8, device=self.device
                 )
 
             wp.launch(
