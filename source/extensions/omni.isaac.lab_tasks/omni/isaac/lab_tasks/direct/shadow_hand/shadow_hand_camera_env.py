@@ -41,7 +41,7 @@ class ShadowHandVisionEnvCfg(ShadowHandEnvCfg):
         width=224,
         height=224,
     )
-    write_image_to_file = True
+    write_image_to_file = False
 
     # env
     num_channels = 3
