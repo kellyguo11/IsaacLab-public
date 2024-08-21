@@ -9,6 +9,7 @@ from __future__ import annotations
 import numpy as np
 import torch
 from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import Articulation, RigidObject
@@ -17,7 +18,6 @@ from omni.isaac.lab.markers import VisualizationMarkers
 from omni.isaac.lab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from omni.isaac.lab.utils.math import quat_conjugate, quat_from_angle_axis, quat_mul, sample_uniform, saturate
 
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from omni.isaac.lab_tasks.direct.allegro_hand import AllegroHandEnvCfg
     from omni.isaac.lab_tasks.direct.shadow_hand import ShadowHandEnvCfg
@@ -305,7 +305,8 @@ class InHandManipulationEnv(DirectRLEnv):
                 self.object_pos,  # 48:51 !!!
                 self.object_rot,  # 51:55 !!!
                 self.object_linvel,  # 55:58 !!!
-                self.cfg.vel_obs_scale * self.object_angvel,  # 58:61 !!! 07_30_11_14_22, 07_30_22_18_29 (new CNN without maxpool)
+                self.cfg.vel_obs_scale
+                * self.object_angvel,  # 58:61 !!! 07_30_11_14_22, 07_30_22_18_29 (new CNN without maxpool)
                 # goal
                 self.in_hand_pos,  # 61:64
                 self.goal_rot,  # 64:68

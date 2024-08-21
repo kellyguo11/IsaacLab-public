@@ -10,7 +10,7 @@ Shadow Hand environment.
 import gymnasium as gym
 
 from . import agents
-from .shadow_hand_camera_env import ShadowHandRGBCameraEnvCfg, ShadowHandDepthCameraEnvCfg, ShadowHandRGBDCameraEnvCfg, ShadowHandRGBCameraAsymmetricEnvCfg, ShadowHandDepthCameraAsymmetricEnvCfg
+from .shadow_hand_camera_env import ShadowHandVisionEnvCfg
 from .shadow_hand_env_cfg import ShadowHandEnvCfg, ShadowHandOpenAIEnvCfg
 
 ##
@@ -49,56 +49,15 @@ gym.register(
     },
 )
 
-### Camera
+### Vision
 
 gym.register(
-    id="Isaac-Shadow-Hand-RGB-Camera-Direct-v0",
-    entry_point="omni.isaac.lab_tasks.direct.shadow_hand.shadow_hand_camera_env:ShadowHandCameraEnv",
+    id="Isaac-Repose-Cube-Shadow-Vision-Direct-v0",
+    entry_point="omni.isaac.lab_tasks.direct.shadow_hand.shadow_hand_camera_env:ShadowHandVisionEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": ShadowHandRGBCameraEnvCfg,
+        "env_cfg_entry_point": ShadowHandVisionEnvCfg,
         "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_camera_cfg.yaml",
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:ShadowHandCameraFFPPORunnerCfg"
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:ShadowHandVisionFFPPORunnerCfg",
     },
 )
-
-gym.register(
-    id="Isaac-Shadow-Hand-Depth-Camera-Direct-v0",
-    entry_point="omni.isaac.lab_tasks.direct.shadow_hand:ShadowHandCameraEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": ShadowHandDepthCameraEnvCfg,
-        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_camera_cfg.yaml",
-    },
-)
-
-gym.register(
-    id="Isaac-Shadow-Hand-RGBD-Camera-Direct-v0",
-    entry_point="omni.isaac.lab_tasks.direct.shadow_hand:ShadowHandCameraEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": ShadowHandRGBDCameraEnvCfg,
-        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_camera_cfg.yaml",
-    },
-)
-
-
-# gym.register(
-#     id="Isaac-Shadow-Hand-RGB-Camera-Asymmetric-Direct-v0",
-#     entry_point="omni.isaac.lab_tasks.direct.shadow_hand:ShadowHandCameraEnv",
-#     disable_env_checker=True,
-#     kwargs={
-#         "env_cfg_entry_point": ShadowHandRGBCameraAsymmetricEnvCfg,
-#         "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_camera_asym_cfg.yaml",
-#     },
-# )
-
-# gym.register(
-#     id="Isaac-Shadow-Hand-Depth-Camera-Asymmetric-Direct-v0",
-#     entry_point="omni.isaac.lab_tasks.direct.shadow_hand:ShadowHandCameraEnv",
-#     disable_env_checker=True,
-#     kwargs={
-#         "env_cfg_entry_point": ShadowHandDepthCameraAsymmetricEnvCfg,
-#         "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_camera_asym_cfg.yaml",
-#     },
-# )

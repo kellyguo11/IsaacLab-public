@@ -69,17 +69,23 @@ class ShadowHandAsymFFPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         max_grad_norm=1.0,
     )
 
+
 @configclass
-class ShadowHandCameraFFPPORunnerCfg(RslRlOnPolicyRunnerCfg):
+class RslRlOnPolicyRunnerCfgSH(RslRlOnPolicyRunnerCfg):
+    runner_name = "OnPolicyRunnerSH"
+
+
+@configclass
+class ShadowHandVisionFFPPORunnerCfg(RslRlOnPolicyRunnerCfgSH):
     num_steps_per_env = 64
-    max_iterations = 100000
+    max_iterations = 10000
     save_interval = 250
     experiment_name = "shadow_hand_cnn"
     empirical_normalization = True
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
-        actor_hidden_dims=[512, 512, 256, 128],
-        critic_hidden_dims=[512, 512, 256, 128],
+        actor_hidden_dims=[1024, 512, 256, 128],
+        critic_hidden_dims=[1024, 512, 256, 128],
         activation="elu",
     )
     algorithm = RslRlPpoAlgorithmCfg(

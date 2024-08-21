@@ -6,43 +6,35 @@
 
 from __future__ import annotations
 
-import gymnasium as gym
-import numpy as np
 import torch
-import torch.nn as nn
-import torchvision.models as models
-import torchvision.transforms as transforms
-from collections.abc import Sequence
+from typing import Tuple
+
+import omni.usd
+from pxr import Semantics
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import Articulation, RigidObject
 from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.sensors import TiledCamera, TiledCameraCfg, save_images_to_file
-from omni.isaac.lab.sim import PhysxCfg, SimulationCfg
-from omni.isaac.lab.sim.spawners.materials.physics_materials_cfg import RigidBodyMaterialCfg
-from omni.isaac.lab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from omni.isaac.lab.utils import configclass
+from omni.isaac.lab.utils.math import quat_conjugate, quat_mul
 
 from omni.isaac.lab_tasks.direct.inhand_manipulation.inhand_manipulation_env import InHandManipulationEnv, unscale
-from .shadow_hand_env_cfg import ShadowHandEnvCfg
-from .models import Trainer
 
-from omni.isaac.lab.utils.math import quat_conjugate, quat_from_angle_axis, quat_mul
+from .models import Trainer
+from .shadow_hand_env_cfg import ShadowHandEnvCfg
 
 
 @configclass
-class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
+class ShadowHandVisionEnvCfg(ShadowHandEnvCfg):
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=512, env_spacing=5.0, replicate_physics=True)
 
     # camera
     tiled_camera: TiledCameraCfg = TiledCameraCfg(
         prim_path="/World/envs/env_.*/Camera",
-        offset=TiledCameraCfg.OffsetCfg(pos=(0, -0.35, 1.0), rot=(0.7071, 0., 0.7071, 0.), convention="world"),
-        # offset=TiledCameraCfg.OffsetCfg(pos=(0.0, -0.27, 1.5), rot=(0.0, 0.0, 0.0, -1.0), convention="opengl"),
-        # offset=TiledCameraCfg.OffsetCfg(pos=(-0.1, -0.9, 0.92), rot=(0.866, 0.5, 0.0, 0.0), convention="opengl"),
-        # offset=TiledCameraCfg.OffsetCfg(pos=(-0.9, -0.3, 0.6), rot=(-0.5, -0.5, 0.5, 0.5), convention="opengl"),
-        data_types=["rgb", "depth"],
+        offset=TiledCameraCfg.OffsetCfg(pos=(0, -0.35, 1.0), rot=(0.7071, 0.0, 0.7071, 0.0), convention="world"),
+        data_types=["rgb", "depth", "semantic_segmentation"],
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
         ),
@@ -53,79 +45,15 @@ class ShadowHandRGBCameraEnvCfg(ShadowHandEnvCfg):
 
     # env
     num_channels = 3
-    num_observations = 157-17+27+24+24#649#536 #num_channels * tiled_camera.height * tiled_camera.width #+ 157
-    num_states = 187
+    num_observations = 188 + 27  # state observation + vision CNN embedding
+    num_states = 187 + 27  # asymettric states + vision CNN embedding
 
 
-@configclass
-class ShadowHandRGBDCameraEnvCfg(ShadowHandEnvCfg):
-    # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=32, env_spacing=5.0, replicate_physics=True)
+class ShadowHandVisionEnv(InHandManipulationEnv):
+    cfg: ShadowHandVisionEnvCfg
 
-    # camera
-    tiled_camera: TiledCameraCfg = TiledCameraCfg(
-        prim_path="/World/envs/env_.*/Camera",
-        offset=TiledCameraCfg.OffsetCfg(pos=(-0.2, -0.2, 2.0), rot=(0.0, 0.0, 0.0, -1.0), convention="opengl"),
-        # offset=TiledCameraCfg.OffsetCfg(pos=(-2.0, 0.0, 0.75), rot=(-0.5, -0.5, 0.5, 0.5), convention="opengl"),
-        data_types=["rgba", "depth"],
-        spawn=sim_utils.PinholeCameraCfg(
-            focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
-        ),
-        width=160,
-        height=120,
-    )
-    write_image_to_file = False
-
-    # env
-    num_channels = 4
-    num_observations = num_channels * tiled_camera.height * tiled_camera.width
-
-
-@configclass
-class ShadowHandDepthCameraEnvCfg(ShadowHandEnvCfg):
-    # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=32, env_spacing=5.0, replicate_physics=True)
-
-    # camera
-    tiled_camera: TiledCameraCfg = TiledCameraCfg(
-        prim_path="/World/envs/env_.*/Camera",
-        offset=TiledCameraCfg.OffsetCfg(pos=(0.0, -0.2, 2.0), rot=(0.0, 0.0, 0.0, -1.0), convention="opengl"),
-        # offset=TiledCameraCfg.OffsetCfg(pos=(-2.0, 0.0, 0.75), rot=(-0.5, -0.5, 0.5, 0.5), convention="opengl"),
-        data_types=["depth"],
-        spawn=sim_utils.PinholeCameraCfg(
-            focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
-        ),
-        width=160,
-        height=120,
-    )
-    write_image_to_file = False
-
-    # env
-    num_channels = 1
-    num_observations = num_channels * tiled_camera.height * tiled_camera.width #+ 157
-
-
-@configclass
-class ShadowHandRGBCameraAsymmetricEnvCfg(ShadowHandRGBCameraEnvCfg):
-    # env
-    asymmetric_obs = True
-    num_states = 187
-
-
-@configclass
-class ShadowHandDepthCameraAsymmetricEnvCfg(ShadowHandDepthCameraEnvCfg):
-    # env
-    asymmetric_obs = True
-    num_states = 187
-
-    
-
-class ShadowHandCameraEnv(InHandManipulationEnv):
-    cfg: ShadowHandRGBCameraEnvCfg
-
-    def __init__(self, cfg: ShadowHandRGBCameraEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: ShadowHandVisionEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
-        # self.goal_pos[:, :] = torch.tensor([-0.15, -0.15, 0.5], device=self.device)
         self._get_embeddings_model()
         # hide goal cubes
         self.goal_pos[:, :] = torch.tensor([-0.2, -0.45, 10.0], device=self.device)
@@ -135,6 +63,13 @@ class ShadowHandCameraEnv(InHandManipulationEnv):
         self.hand = Articulation(self.cfg.robot_cfg)
         self.object = RigidObject(self.cfg.object_cfg)
         self._tiled_camera = TiledCamera(self.cfg.tiled_camera)
+        # add semantics for in-hand cube
+        prim = omni.usd.get_context().get_stage().GetPrimAtPath("/World/envs/env_0/object")
+        sem = Semantics.SemanticsAPI.Apply(prim, "Semantics")
+        sem.CreateSemanticTypeAttr()
+        sem.CreateSemanticDataAttr()
+        sem.GetSemanticTypeAttr().Set("class")
+        sem.GetSemanticDataAttr().Set("cube")
         # clone and replicate (no need to filter for this environment)
         self.scene.clone_environments(copy_from_source=False)
         # add articultion to scene - we must register to scene to randomize with EventManager
@@ -147,49 +82,56 @@ class ShadowHandCameraEnv(InHandManipulationEnv):
 
     def _get_embeddings_model(self):
         self.trainer = Trainer(self.device)
-        
-    
+
     def compute_embeddings_observations(self):
+        # process RGB image
         rgb_img = self._tiled_camera.data.output["rgb"].clone() / 255.0
+        self._save_images("rgb", rgb_img)
         mean_tensor = torch.mean(rgb_img, dim=(1, 2), keepdim=True)
         rgb_img -= mean_tensor
+        # process depth image
         depth_img = self._tiled_camera.data.output["depth"].clone()
-        depth_img[depth_img==float("inf")] = 0
+        depth_img[depth_img == float("inf")] = 0
         depth_img /= 5.0
         depth_img /= torch.max(depth_img)
-        img = torch.cat((rgb_img, depth_img), dim=-1)
-        # rgb_embeddings = self.rgb_model(rgb_img).squeeze()
-        # # relative_pose = quat_mul(self.object_rot, quat_conjugate(self.goal_rot))
-        # # rgb_embeddings[:, 3:] = relative_pose.clone()
+        self._save_images("depth", depth_img)
+        # process segmentation image
+        segmentation_img = self._tiled_camera.data.output["semantic_segmentation"].clone() / 255.0
+        mean_tensor = torch.mean(segmentation_img, dim=(1, 2), keepdim=True)
+        segmentation_img -= mean_tensor
+        self._save_images("segmentation", segmentation_img)
+        # combine all image input in channel dimension
+        img_obs = torch.cat((rgb_img, depth_img, segmentation_img), dim=-1)
+
+        # generate ground truth keypoints for in-hand cube
         gt_keypoints = gen_keypoints(pose=torch.cat((self.object_pos, self.object_rot), dim=1))
         for i in range(3):
             gt_keypoints.view(-1, 24)[:, i] -= self.object.data.default_root_state[:, i]
         object_pose = torch.cat([self.object_pos, gt_keypoints.view(-1, 24)], dim=-1)
 
-        pose_loss, rgb_embeddings = self.trainer.step(img, object_pose)
+        # train CNN to regress on keypoint positions
+        pose_loss, embeddings = self.trainer.step(img_obs, object_pose)
 
+        # log pose loss from CNN training
         if "log" not in self.extras:
             self.extras["log"] = dict()
         self.extras["log"]["pose_loss"] = pose_loss
 
-        rgb_embeddings_clone = rgb_embeddings.clone().detach()
-        # rgb_embeddings_clone[:, 3:] = gt_keypoints.view(-1, 24).clone()
-
+        self.cnn_embeddings = embeddings.clone().detach()
+        # compute keypoint states based on CNN output
         goal_keypoints = gen_keypoints(pose=torch.cat((torch.zeros_like(self.goal_pos), self.goal_rot), dim=-1))
-        # zero_pos_obj_keypoints = gen_keypoints(pose=torch.cat((torch.zeros_like(self.goal_pos), self.object_rot), dim=-1))
-        predicted_cube_pos = rgb_embeddings_clone[:, :3]
-        zero_pos_obj_keypoints = rgb_embeddings_clone[:, 3:]
+        predicted_cube_pos = self.cnn_embeddings[:, :3]
+        zero_pos_obj_keypoints = self.cnn_embeddings[:, 3:]
         for i in range(3):
             zero_pos_obj_keypoints[:, i] -= predicted_cube_pos[:, i]
 
         obs = torch.cat(
             (
-                rgb_embeddings_clone,
+                self.cnn_embeddings,
                 goal_keypoints.view(-1, 24),
-                goal_keypoints.view(-1, 24)-zero_pos_obj_keypoints,
-                # depth_embeddings
+                goal_keypoints.view(-1, 24) - zero_pos_obj_keypoints,
             ),
-            dim=-1
+            dim=-1,
         )
 
         return obs
@@ -214,57 +156,20 @@ class ShadowHandCameraEnv(InHandManipulationEnv):
         )
         return obs
 
+    def compute_states(self):
+        sim_states = self.compute_full_state()
+        state = torch.cat((sim_states, self.cnn_embeddings), dim=-1)
+        return state
+
     def _get_observations(self) -> dict:
         state_obs = self.compute_state_observations()
         embedding_obs = self.compute_embeddings_observations()
-        obs = torch.cat(
-            (state_obs, embedding_obs), dim=-1
-        )
+        obs = torch.cat((state_obs, embedding_obs), dim=-1)
 
-        self.fingertip_force_sensors = self.hand.root_physx_view.get_link_incoming_joint_force()[
-            :, self.finger_bodies
-        ]
-        state = self.compute_full_state()
+        self.fingertip_force_sensors = self.hand.root_physx_view.get_link_incoming_joint_force()[:, self.finger_bodies]
+        state = self.compute_states()
         observations = {"policy": obs, "critic": state}
         return observations
-        # if self.cfg.asymmetric_obs:
-        #     self.fingertip_force_sensors = self.hand.root_physx_view.get_link_incoming_joint_force()[
-        #         :, self.finger_bodies
-        #     ]
-        #     states = self.compute_full_state()
-
-        # if self.cfg.num_channels == 1:
-        #     # depth
-        #     data_type = "depth"
-        #     camera_data = self._tiled_camera.data.output[data_type].clone()
-        #     camera_data[camera_data==float("inf")] = 0
-        #     camera_data /= 5.0
-        #     self._save_images("depth", camera_data)
-        #     observations = {"policy": camera_data}
-        #     if self.cfg.asymmetric_obs:
-        #         observations = {"policy": camera_data, "critic": states}
-        # elif self.cfg.num_channels == 3:
-        #     # RGB
-        #     data_type = "rgba"
-        #     rgb_data = 1 - self._tiled_camera.data.output[data_type][..., :3].clone()
-        #     self._save_images("rgb", rgb_data)
-        #     observations = {"policy": rgb_data}
-        #     if self.cfg.asymmetric_obs:
-        #         observations = {"policy": rgb_data, "critic": states}
-        # elif self.cfg.num_channels == 4:
-        #     # RGB+D
-        #     depth_data = self._tiled_camera.data.output["depth"].clone()
-        #     depth_data[depth_data==float("inf")] = 0
-        #     depth_data /= 2.0
-        #     rgb_data = 1 - self._tiled_camera.data.output["rgba"][..., :3].clone()
-        #     self._save_images("rgb", rgb_data)
-        #     self._save_images("depth", depth_data)
-        #     camera_data = torch.cat((rgb_data, depth_data), dim=-1)
-        #     observations = {"policy": camera_data}
-        #     if self.cfg.asymmetric_obs:
-        #         observations = {"policy": camera_data, "critic": states}
-
-        # return observations
 
     def _save_images(self, data_type, camera_data):
         if self.cfg.write_image_to_file:
@@ -273,7 +178,7 @@ class ShadowHandCameraEnv(InHandManipulationEnv):
 
 @torch.jit.script
 def local_to_world_space(pos_offset_local: torch.Tensor, pose_global: torch.Tensor):
-    """ Convert a point from the local frame to the global frame
+    """Convert a point from the local frame to the global frame
     Args:
         pos_offset_local: Point in local frame. Shape: [N, 3]
         pose_global: The spatial pose of this point. Shape: [N, 7]
@@ -282,15 +187,10 @@ def local_to_world_space(pos_offset_local: torch.Tensor, pose_global: torch.Tens
     """
     quat_pos_local = torch.cat(
         [
-            torch.zeros(pos_offset_local.shape[0], 1, dtype=torch.float32, device=pos_offset_local.device), 
-            pos_offset_local
-        ], dim=-1
-    )
-    quat_trans = torch.cat(
-        [
-            torch.zeros(pos_offset_local.shape[0], 1, dtype=torch.float32, device=pos_offset_local.device), 
-            pose_global[:, 0:3]
-        ], dim=-1
+            torch.zeros(pos_offset_local.shape[0], 1, dtype=torch.float32, device=pos_offset_local.device),
+            pos_offset_local,
+        ],
+        dim=-1,
     )
     quat_global = pose_global[:, 3:7]
     quat_global_conj = quat_conjugate(quat_global)
@@ -301,13 +201,9 @@ def local_to_world_space(pos_offset_local: torch.Tensor, pose_global: torch.Tens
     return result_pos_gloal
 
 
-    size = [2*0.03, 2*0.03, 2*0.03]
-
 @torch.jit.script
 def gen_keypoints(
-    pose: torch.Tensor, 
-    num_keypoints: int = 8, 
-    size: Tuple[float, float, float] = (2*0.03, 2*0.03, 2*0.03)
+    pose: torch.Tensor, num_keypoints: int = 8, size: tuple[float, float, float] = (2 * 0.03, 2 * 0.03, 2 * 0.03)
 ):
 
     num_envs = pose.shape[0]
@@ -315,7 +211,7 @@ def gen_keypoints(
     for i in range(num_keypoints):
         # which dimensions to negate
         n = [((i >> k) & 1) == 0 for k in range(3)]
-        corner_loc = [(1 if n[k] else -1) * s / 2 for k, s in enumerate(size)],
+        corner_loc = ([(1 if n[k] else -1) * s / 2 for k, s in enumerate(size)],)
         corner = torch.tensor(corner_loc, dtype=torch.float32, device=pose.device) * keypoints_buf[:, i, :]
         keypoints_buf[:, i, :] = local_to_world_space(corner, pose)
     return keypoints_buf
