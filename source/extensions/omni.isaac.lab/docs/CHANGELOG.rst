@@ -1,14 +1,13 @@
 Changelog
 ---------
 
-0.22.0 (2024-08-15)
+0.24.0 (2024-08-17)
 ~~~~~~~~~~~~~~~~~~~
 
 Added
 ^^^^^
 
 * Added additional annotators for :class:`omni.isaac.lab.sensors.camera.TiledCamera` class.
-
 
 Changed
 ^^^^^^^
@@ -17,6 +16,49 @@ Changed
 * Single channel outputs for :class:`omni.isaac.lab.sensors.TiledCamera`, :class:`omni.isaac.lab.sensors.Camera` and :class:`omni.isaac.lab.sensors.RayCasterCamera` now has shape (H, W, 1).
 * Data type for RGB output for :class:`omni.isaac.lab.sensors.TiledCamera` changed from ``torch.float`` to ``torch.uint8``.
 * Dimension of RGB output for :class:`omni.isaac.lab.sensors.Camera` changed from (H, W, 4) to (H, W, 3). Use type ``rgba`` to retrieve the previous dimension.
+
+
+0.23.1 (2024-08-17)
+~~~~~~~~~~~~~~~~~~~
+
+Changed
+^^^^^^^
+
+* Updated torch to version 2.4.0.
+
+
+0.23.0 (2024-08-16)
+~~~~~~~~~~~~~~~~~~~
+
+Added
+^^^^^
+
+* Added direct workflow base class :class:`omni.isaac.lab.envs.DirectMARLEnv` for multi-agent environments.
+
+
+0.22.0 (2024-08-14)
+~~~~~~~~~~~~~~~~~~~
+
+Added
+^^^^^
+
+* Added :mod:`~omni.isaac.lab.utils.modifiers` module to provide framework for configurable and custom
+  observation data modifiers.
+* Adapted the :class:`~omni.isaac.lab.managers.ObservationManager` class to support custom modifiers.
+  These are applied to the observation data before applying any noise or scaling operations.
+
+
+0.21.2 (2024-08-13)
+~~~~~~~~~~~~~~~~~~~
+
+Fixed
+^^^^^
+
+* Moved event mode-based checks in the :meth:`omni.isaac.lab.managers.EventManager.apply` method outside
+  the loop that iterates over the event terms. This prevents unnecessary checks and improves readability.
+* Fixed the logic for global and per environment interval times when using the "interval" mode inside the
+  event manager. Earlier, the internal lists for these times were of unequal lengths which led to wrong indexing
+  inside the loop that iterates over the event terms.
 
 
 0.21.1 (2024-08-06)

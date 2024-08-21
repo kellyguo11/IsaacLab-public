@@ -68,7 +68,7 @@ for each component (such as the ``ObservationCfg`` and ``RewardCfg``).
     implementation, weight and additional parameters to be passed to the function. Users can define multiple
     reward terms and their weights to be used in the reward function.
 
-    .. literalinclude:: ../../../source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/manager_based/classic/cartpole/cartpole_env_cfg.py
+    .. literalinclude:: ../../../../source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/manager_based/classic/cartpole/cartpole_env_cfg.py
         :language: python
         :pyobject: RewardsCfg
 
@@ -91,12 +91,13 @@ Direct Environments
 The direct-style environment aligns more closely with traditional implementations of environments,
 where a single script directly implements the reward function, observation function, resets, and all the other components
 of the environment. This approach does not require the manager classes. Instead, users are provided the complete freedom
-to implement their task through the APIs from the base class :class:`envs.DirectRLEnv`. For users migrating from the `IsaacGymEnvs`_
-and `OmniIsaacGymEnvs`_ framework, this workflow may be more familiar.
+to implement their task through the APIs from the base classes :class:`envs.DirectRLEnv` or :class:`envs.DirectMARLEnv`.
+For users migrating from the `IsaacGymEnvs`_ and `OmniIsaacGymEnvs`_ framework, this workflow may be more familiar.
 
 When defining an environment with the direct-style implementation, we expect the user define a single class that
-implements the entire environment. The task class should inherit from the base :class:`envs.DirectRLEnv` class and should
-have its corresponding configuration class that inherits from :class:`envs.DirectRLEnvCfg`. The task class is responsible
+implements the entire environment. The task class should inherit from the base classes :class:`envs.DirectRLEnv` or
+:class:`envs.DirectMARLEnv` and should have its corresponding configuration class that inherits from
+:class:`envs.DirectRLEnvCfg` or :class:`envs.DirectMARLEnvCfg` respectively. The task class is responsible
 for setting up the scene, processing the actions, computing the rewards, observations, resets, and termination signals.
 
 .. dropdown:: Example for defining the reward function for the Cartpole task using the direct-style
@@ -104,14 +105,14 @@ for setting up the scene, processing the actions, computing the rewards, observa
 
     The following function is a part of the Cartpole environment class and is responsible for computing the rewards.
 
-    .. literalinclude:: ../../../source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/cartpole/cartpole_env.py
+    .. literalinclude:: ../../../../source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/cartpole/cartpole_env.py
         :language: python
         :pyobject: CartpoleEnv._get_rewards
         :dedent: 4
 
     It calls the :meth:`compute_rewards` function which is Torch JIT compiled for performance benefits.
 
-    .. literalinclude:: ../../../source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/cartpole/cartpole_env.py
+    .. literalinclude:: ../../../../source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/cartpole/cartpole_env.py
         :language: python
         :pyobject: compute_rewards
 

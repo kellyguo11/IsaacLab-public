@@ -58,7 +58,7 @@ compatibility issues with some Linux distributions. If you encounter any issues,
                   isaaclab\Scripts\activate
 
 
--  Next, install a CUDA-enabled PyTorch 2.4.0 build based on the CUDA version available on your system.
+-  Next, install a CUDA-enabled PyTorch 2.4.0 build based on the CUDA version available on your system. This step is optional for Linux, but required for Windows to ensure a CUDA-compatible version of PyTorch is installed.
 
    .. tab-set::
 
