@@ -1,19 +1,19 @@
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 #  Copyright 2021 ETH Zurich, NVIDIA CORPORATION
 #  SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
 
 import os
-import statistics
 import time
 import torch
 from collections import deque
 from torch.utils.tensorboard import SummaryWriter as TensorboardSummaryWriter
 
-import rsl_rl
-from rsl_rl.algorithms import PPO
-from rsl_rl.env import VecEnv
-from rsl_rl.modules import ActorCritic, ActorCriticRecurrent, EmpiricalNormalization
 from rsl_rl.runners import OnPolicyRunner
 from rsl_rl.utils import store_code_state
 

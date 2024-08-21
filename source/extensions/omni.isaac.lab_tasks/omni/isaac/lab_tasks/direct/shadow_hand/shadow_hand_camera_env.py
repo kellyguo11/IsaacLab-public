@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import torch
-from typing import Tuple
 
 import omni.usd
 from pxr import Semantics
