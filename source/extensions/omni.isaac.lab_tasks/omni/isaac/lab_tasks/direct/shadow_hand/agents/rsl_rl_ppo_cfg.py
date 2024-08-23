@@ -14,7 +14,7 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
 
 @configclass
 class ShadowHandPPORunnerCfg(RslRlOnPolicyRunnerCfg):
-    num_steps_per_env = 64
+    num_steps_per_env = 16
     max_iterations = 10000
     save_interval = 250
     experiment_name = "shadow_hand"
@@ -78,14 +78,14 @@ class ShadowHandAsymFFPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 @configclass
 class ShadowHandVisionFFPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 64
-    max_iterations = 10000
+    max_iterations = 100000
     save_interval = 250
     experiment_name = "shadow_hand_cnn"
     empirical_normalization = True
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
-        actor_hidden_dims=[1024, 512, 256, 128],
-        critic_hidden_dims=[1024, 512, 256, 128],
+        actor_hidden_dims=[1024, 512, 512, 256, 128],
+        critic_hidden_dims=[1024, 512, 512, 256, 128],
         activation="elu",
     )
     algorithm = RslRlPpoAlgorithmCfg(

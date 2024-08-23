@@ -19,9 +19,8 @@ The following example shows how to wrap an environment for RSL-RL:
 import gymnasium as gym
 import torch
 
-from rsl_rl.env import VecEnv
-
 from omni.isaac.lab.envs import DirectRLEnv, ManagerBasedRLEnv
+from rsl_rl.env import VecEnv
 
 
 class RslRlVecEnvWrapper(VecEnv):

@@ -38,10 +38,9 @@ import gym.spaces  # needed for rl-games incompatibility: https://github.com/Den
 import gymnasium
 import torch
 
+from omni.isaac.lab.envs import DirectRLEnv, ManagerBasedRLEnv, VecEnvObs
 from rl_games.common import env_configurations
 from rl_games.common.vecenv import IVecEnv
-
-from omni.isaac.lab.envs import DirectRLEnv, ManagerBasedRLEnv, VecEnvObs
 
 """
 Vectorized environment wrapper.

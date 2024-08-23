@@ -49,14 +49,13 @@ import math
 import os
 from datetime import datetime
 
-from rl_games.common import env_configurations, vecenv
-from rl_games.common.algo_observer import IsaacAlgoObserver
-from rl_games.torch_runner import Runner
-
 from omni.isaac.lab.envs import DirectRLEnvCfg, ManagerBasedRLEnvCfg
 from omni.isaac.lab.utils.assets import retrieve_file_path
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
+from rl_games.common import env_configurations, vecenv
+from rl_games.common.algo_observer import IsaacAlgoObserver
+from rl_games.torch_runner import Runner
 
 import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
