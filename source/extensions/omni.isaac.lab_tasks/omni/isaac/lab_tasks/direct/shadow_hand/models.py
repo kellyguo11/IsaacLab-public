@@ -53,6 +53,7 @@ class Trainer:
     def step(self, image, gt_pose):
         self.rgb_optimizer.zero_grad()
 
+        # image_with_grad = image.clone().requires_grad_()
         predicted_pose = self.cnn_model(image).squeeze()
         pose_loss = self.l2_loss(predicted_pose, gt_pose) * 100
 

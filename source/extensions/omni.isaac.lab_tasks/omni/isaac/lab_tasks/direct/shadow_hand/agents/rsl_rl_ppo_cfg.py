@@ -70,13 +70,13 @@ class ShadowHandAsymFFPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     )
 
 
-@configclass
-class RslRlOnPolicyRunnerCfgSH(RslRlOnPolicyRunnerCfg):
-    runner_name = "OnPolicyRunnerSH"
+# @configclass
+# class RslRlOnPolicyRunnerCfgSH(RslRlOnPolicyRunnerCfg):
+#     runner_name = "OnPolicyRunnerSH"
 
 
 @configclass
-class ShadowHandVisionFFPPORunnerCfg(RslRlOnPolicyRunnerCfgSH):
+class ShadowHandVisionFFPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 64
     max_iterations = 10000
     save_interval = 250

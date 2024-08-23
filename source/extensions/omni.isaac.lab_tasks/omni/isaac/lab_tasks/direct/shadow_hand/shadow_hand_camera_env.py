@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import torch
-from typing import Tuple
 
 import omni.usd
 from pxr import Semantics
@@ -83,6 +82,8 @@ class ShadowHandVisionEnv(InHandManipulationEnv):
     def _get_embeddings_model(self):
         self.trainer = Trainer(self.device)
 
+    @torch.enable_grad()
+    @torch.inference_mode(False)
     def compute_embeddings_observations(self):
         # process RGB image
         rgb_img = self._tiled_camera.data.output["rgb"].clone() / 255.0
