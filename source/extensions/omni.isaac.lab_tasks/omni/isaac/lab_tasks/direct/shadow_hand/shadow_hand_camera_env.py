@@ -46,6 +46,16 @@ class ShadowHandVisionEnvCfg(ShadowHandEnvCfg):
     num_channels = 3
     num_observations = 188 + 27  # state observation + vision CNN embedding
     num_states = 187 + 27  # asymettric states + vision CNN embedding
+    # inference for CNN
+    inference = False
+
+
+@configclass
+class ShadowHandVisionEnvPlayCfg(ShadowHandEnvCfg):
+    # scene
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=24, env_spacing=5.0, replicate_physics=True)
+    # inference for CNN
+    inference = True
 
 
 class ShadowHandVisionEnv(InHandManipulationEnv):
@@ -80,11 +90,13 @@ class ShadowHandVisionEnv(InHandManipulationEnv):
         light_cfg.func("/World/Light", light_cfg)
 
     def _get_embeddings_model(self):
-        self.trainer = Trainer(self.device)
+        """Initialize CNN model"""
+        self.trainer = Trainer(self.device, self.cfg.inference)
 
+    # we backprop the CNN in this method so we make sure grads are enabled
     @torch.enable_grad()
     @torch.inference_mode(False)
-    def compute_embeddings_observations(self):
+    def compute_image_observations(self):
         # process RGB image
         rgb_img = self._tiled_camera.data.output["rgb"].clone() / 255.0
         self._save_images("rgb", rgb_img)
@@ -137,7 +149,8 @@ class ShadowHandVisionEnv(InHandManipulationEnv):
 
         return obs
 
-    def compute_state_observations(self):
+    def compute_proprio_observations(self):
+        """Prpprioception observations from physics."""
         obs = torch.cat(
             (
                 # hand
@@ -158,21 +171,26 @@ class ShadowHandVisionEnv(InHandManipulationEnv):
         return obs
 
     def compute_states(self):
+        """States for the critic."""
         sim_states = self.compute_full_state()
         state = torch.cat((sim_states, self.cnn_embeddings), dim=-1)
         return state
 
     def _get_observations(self) -> dict:
-        state_obs = self.compute_state_observations()
-        embedding_obs = self.compute_embeddings_observations()
-        obs = torch.cat((state_obs, embedding_obs), dim=-1)
-
+        # proprioception observations
+        state_obs = self.compute_proprio_observations()
+        # vision observations from CMM
+        image_obs = self.compute_image_observations()
+        obs = torch.cat((state_obs, image_obs), dim=-1)
+        # asymmetric critic states
         self.fingertip_force_sensors = self.hand.root_physx_view.get_link_incoming_joint_force()[:, self.finger_bodies]
         state = self.compute_states()
+
         observations = {"policy": obs, "critic": state}
         return observations
 
     def _save_images(self, data_type, camera_data):
+        """Writes image buffer to file."""
         if self.cfg.write_image_to_file:
             save_images_to_file(camera_data, f"shadow_hand_{data_type}.png")
 

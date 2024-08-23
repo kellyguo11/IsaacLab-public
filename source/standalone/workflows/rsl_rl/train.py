@@ -55,8 +55,6 @@ from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 from rsl_rl.runners import OnPolicyRunner
 
 import omni.isaac.lab_tasks  # noqa: F401
-
-# from omni.isaac.lab_tasks.direct.shadow_hand.agents.rsl_rl.on_policy_runner_sh import OnPolicyRunnerSH
 from omni.isaac.lab_tasks.utils import get_checkpoint_path
 from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlVecEnvWrapper
@@ -104,9 +102,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg, agent_cfg: RslRlOnPolic
     env = RslRlVecEnvWrapper(env)
 
     # create runner from rsl-rl
-    # if hasattr(agent_cfg, "runner_name"):
-    #     runner = OnPolicyRunnerSH(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
-    # else:
     runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
     # write git state to logs
     runner.add_git_repo_to_log(__file__)

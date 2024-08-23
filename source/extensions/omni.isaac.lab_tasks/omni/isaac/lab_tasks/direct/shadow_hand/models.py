@@ -10,7 +10,9 @@ import torch.nn as nn
 
 
 class CustomCNN(nn.Module):
-    def __init__(self, depth=False):
+    """Custom CNN architecture used to regress keypoint positions of the in-hand cube from image data."""
+
+    def __init__(self):
         super().__init__()
         num_channel = 8
         self.cnn = nn.Sequential(
@@ -40,6 +42,8 @@ class CustomCNN(nn.Module):
 
 
 class Trainer:
+    """Class for training a custom CNN from image data during the rollout process."""
+
     def __init__(self, device, inference=False):
         self.device = device
         self.inference = inference
@@ -64,6 +68,8 @@ class Trainer:
             self.cnn_model.train()
 
     def step(self, image, gt_pose):
+        """Training step for regressing keypoint positions using a custom CNN."""
+
         if self.inference:
             with torch.inference_mode():
                 predicted_pose = self.cnn_model(image).squeeze()
@@ -79,7 +85,7 @@ class Trainer:
 
             self.step_count += 1
 
-            if (self.step_count - 1) % 100000 == 0:
+            if self.step_count % 100000 == 0:
                 torch.save(
                     self.cnn_model.state_dict(),
                     os.path.join(self.log_dir, f"cnn_{self.step_count}_{pose_loss.detach().cpu().numpy()}.pth"),

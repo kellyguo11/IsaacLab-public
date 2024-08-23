@@ -78,9 +78,9 @@ class ShadowHandAsymFFPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 @configclass
 class ShadowHandVisionFFPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 64
-    max_iterations = 100000
+    max_iterations = 50000
     save_interval = 250
-    experiment_name = "shadow_hand_cnn"
+    experiment_name = "shadow_hand_vision"
     empirical_normalization = True
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
