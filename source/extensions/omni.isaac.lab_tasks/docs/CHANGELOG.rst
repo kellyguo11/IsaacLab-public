@@ -1,6 +1,15 @@
 Changelog
 ---------
 
+0.10.8 (2024-09-25)
+~~~~~~~~~~~~~~~~~~~
+
+Added
+^^^^^
+
+* Added ``Isaac-Stack-Cube-Franka-IK-Rel-v0`` environment as a manager-based RL env that implements a three cube stacking task.
+
+
 0.10.7 (2024-10-02)
 ~~~~~~~~~~~~~~~~~~~
 
