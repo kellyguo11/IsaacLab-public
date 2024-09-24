@@ -1,7 +1,7 @@
 Changelog
 ---------
 
-0.10.9 (2024-10-22)
+0.10.10 (2024-10-22)
 ~~~~~~~~~~~~~~~~~~~
 
 Changed
@@ -11,7 +11,7 @@ Changed
   Earlier, this was done by making an empty configuration object, which is now unnecessary.
 
 
-0.10.8 (2024-10-22)
+0.10.9 (2024-10-22)
 ~~~~~~~~~~~~~~~~~~~
 
 Fixed
@@ -19,6 +19,15 @@ Fixed
 
 * Fixed the wrong selection of body id's in the :meth:`omni.isaac.lab_tasks.manager_based.locomotion.velocity.mdp.rewards.feet_slide`
   reward function. This makes sure the right IDs are selected for the bodies.
+
+
+0.10.8 (2024-09-25)
+~~~~~~~~~~~~~~~~~~~
+
+Added
+^^^^^
+
+* Added ``Isaac-Stack-Cube-Franka-IK-Rel-v0`` environment as a manager-based RL env that implements a three cube stacking task.
 
 
 0.10.7 (2024-10-02)
