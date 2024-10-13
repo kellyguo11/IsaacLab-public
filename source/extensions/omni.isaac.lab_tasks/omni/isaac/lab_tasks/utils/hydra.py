@@ -39,10 +39,12 @@ def register_task_to_hydra(
     """
     # load the configurations
     env_cfg = load_cfg_from_registry(task_name, "env_cfg_entry_point")
-    agent_cfg = load_cfg_from_registry(task_name, agent_cfg_entry_point)
+    agent_cfg = None
+    if agent_cfg_entry_point:
+        agent_cfg = load_cfg_from_registry(task_name, agent_cfg_entry_point)
     # convert the configs to dictionary
     env_cfg_dict = env_cfg.to_dict()
-    if isinstance(agent_cfg, dict):
+    if isinstance(agent_cfg, dict) or agent_cfg is None:
         agent_cfg_dict = agent_cfg
     else:
         agent_cfg_dict = agent_cfg.to_dict()
@@ -83,7 +85,7 @@ def hydra_task_config(task_name: str, agent_cfg_entry_point: str) -> Callable:
                 hydra_env_cfg = replace_strings_with_slices(hydra_env_cfg)
                 # update the configs with the Hydra command line arguments
                 env_cfg.from_dict(hydra_env_cfg["env"])
-                if isinstance(agent_cfg, dict):
+                if isinstance(agent_cfg, dict) or agent_cfg is None:
                     agent_cfg = hydra_env_cfg["agent"]
                 else:
                     agent_cfg.from_dict(hydra_env_cfg["agent"])
