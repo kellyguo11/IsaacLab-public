@@ -1,6 +1,15 @@
 Changelog
 ---------
 
+0.10.9 (2024-10-01)
+~~~~~~~~~~~~~~~~~~~
+
+Changed
+^^^^^^^
+
+* Changed ``Isaac-Stack-Cube-Franka-IK-Rel-v0`` to align with Robosuite stacking env.
+
+
 0.10.8 (2024-09-25)
 ~~~~~~~~~~~~~~~~~~~
 
