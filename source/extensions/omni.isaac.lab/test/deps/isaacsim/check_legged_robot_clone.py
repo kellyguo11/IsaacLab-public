@@ -132,11 +132,6 @@ def main():
     )
     # convert environment positions to torch tensor
     envs_positions = torch.tensor(envs_positions, dtype=torch.float, device=world.device)
-    # filter collisions within each environment instance
-    physics_scene_path = world.get_physics_context().prim_path
-    cloner.filter_collisions(
-        physics_scene_path, "/World/collisions", envs_prim_paths, global_paths=["/World/defaultGroundPlane"]
-    )
 
     # Resolve robot prim paths
     if args_cli.asset == "isaaclab":

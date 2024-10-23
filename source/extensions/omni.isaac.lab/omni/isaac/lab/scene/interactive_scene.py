@@ -158,8 +158,6 @@ class InteractiveScene:
                     root_path=self.env_regex_ns.replace(".*", ""),
                 )
 
-            self.filter_collisions(self._global_prim_paths)
-
     def clone_environments(self, copy_from_source: bool = False):
         """Creates clones of the environment ``/World/envs/env_0``.
 

@@ -94,20 +94,6 @@ def design_scene(sim: SimulationContext, num_envs: int = 2048) -> RigidObject:
         init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0.0, 5.0)),
     )
     balls = RigidObject(cfg)
-    # Clone the scene
-    # obtain the current physics scene
-    physics_scene_prim_path = None
-    for prim in stage.Traverse():
-        if prim.HasAPI(PhysxSchema.PhysxSceneAPI):
-            physics_scene_prim_path = prim.GetPrimPath()
-            carb.log_info(f"Physics scene prim path: {physics_scene_prim_path}")
-            break
-    # filter collisions within each environment instance
-    cloner.filter_collisions(
-        physics_scene_prim_path,
-        "/World/collisions",
-        envs_prim_paths,
-    )
     return balls
 
 

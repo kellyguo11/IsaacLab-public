@@ -90,10 +90,6 @@ def main():
     env_positions = cloner.clone(
         source_prim_path="/World/envs/env_0", prim_paths=envs_prim_paths, replicate_physics=True, copy_from_source=True
     )
-    physics_scene_path = sim.get_physics_context().prim_path
-    cloner.filter_collisions(
-        physics_scene_path, "/World/collisions", prim_paths=envs_prim_paths, global_paths=["/World/ground"]
-    )
 
     # Use replicator to randomize color on the spheres
     with rep.new_layer():

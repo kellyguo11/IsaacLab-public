@@ -106,11 +106,6 @@ def main():
         prim_path="/World/envs/env_.*/Robot/.*_SHANK", track_air_time=True, debug_vis=not args_cli.headless
     )
     contact_sensor = ContactSensor(cfg=contact_sensor_cfg)
-    # filter collisions within each environment instance
-    physics_scene_path = sim.get_physics_context().prim_path
-    cloner.filter_collisions(
-        physics_scene_path, "/World/collisions", envs_prim_paths, global_paths=["/World/defaultGroundPlane"]
-    )
 
     # Play the simulator
     sim.reset()
