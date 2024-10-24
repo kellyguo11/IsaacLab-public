@@ -80,6 +80,9 @@ app.vulkan = true
 # disable replicator orchestrator for better runtime perf
 exts."omni.replicator.core".Orchestrator.enabled = false
 
+# makes stage startup faster
+exts."omni.usd".locking.onClose = false
+
 [settings.exts."omni.kit.registry.nucleus"]
 registries = [
     { name = "kit/default", url = "https://ovextensionsprod.blob.core.windows.net/exts/kit/prod/shared" },
