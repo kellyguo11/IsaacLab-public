@@ -66,9 +66,9 @@ variables to your terminal for the remaining of the installation instructions:
       .. code:: batch
 
          :: Isaac Sim root directory
-         set ISAACSIM_PATH="%USERPROFILE%\AppData\Local\ov\pkg\isaac-sim-4.2.0"
+         set ISAACSIM_PATH=%USERPROFILE%\AppData\Local\ov\pkg\isaac-sim-4.2.0
          :: Isaac Sim python executable
-         set ISAACSIM_PYTHON_EXE="%ISAACSIM_PATH:"=%\python.bat"
+         set ISAACSIM_PYTHON_EXE=%ISAACSIM_PATH:"=%\python.bat
 
 
 For more information on common paths, please check the Isaac Sim
