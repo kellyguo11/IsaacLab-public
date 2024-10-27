@@ -1,6 +1,15 @@
 Changelog
 ---------
 
+0.10.12 (2024-10-25)
+~~~~~~~~~~~~~~~~~~~~
+
+Fixed
+^^^^^
+
+* Fixed issues with defining Gymnasium spaces in Direct workflows due to Hydra/OmegaConf limitations with non-primitive types.
+
+
 0.10.11 (2024-10-22)
 ~~~~~~~~~~~~~~~~~~~~
 
