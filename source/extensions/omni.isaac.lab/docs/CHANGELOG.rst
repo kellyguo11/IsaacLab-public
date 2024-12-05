@@ -103,7 +103,7 @@ Added
 * Added full buffer property to :class:`omni.isaac.lab.utils.buffers.circular_buffer.CircularBuffer`
 
 
-0.27.33 (2024-12-15)
+0.27.34 (2024-12-15)
 ~~~~~~~~~~~~~~~~~~~~
 
 Added
@@ -112,7 +112,7 @@ Added
 * Added action clip to all :class:`omni.isaac.lab.envs.mdp.actions`.
 
 
-0.27.32 (2024-12-14)
+0.27.33 (2024-12-14)
 ~~~~~~~~~~~~~~~~~~~~
 
 Changed
@@ -121,7 +121,7 @@ Changed
 * Added check for error below threshold in state machines to ensure the state has been reached.
 
 
-0.27.31 (2024-12-13)
+0.27.32 (2024-12-13)
 ~~~~~~~~~~~~~~~~~~~~
 
 Fixed
@@ -130,7 +130,7 @@ Fixed
 * Fixed the shape of ``quat_w`` in the ``apply_actions`` method of :attr:`~omni.isaac.lab.env.mdp.NonHolonomicAction` (previously (N,B,4), now (N,4) since the number of root bodies B is required to be 1). Previously ``apply_actions`` errored because ``euler_xyz_from_quat`` requires inputs of shape (N,4).
 
 
-0.27.30 (2024-12-11)
+0.27.31 (2024-12-11)
 ~~~~~~~~~~~~~~~~~~~~
 
 Changed
@@ -141,7 +141,7 @@ Changed
 * Improved documentation to clarify the usage of the :meth:`~omni.isaac.lab.envs.mdp.rewards.base_height_l2` function in both flat and rough terrain settings.
 
 
-0.27.29 (2024-12-11)
+0.27.30 (2024-12-11)
 ~~~~~~~~~~~~~~~~~~~~
 
 Fixed
@@ -151,7 +151,7 @@ Fixed
   Jacobian computed w.r.t. to the root frame of the robot. This helps ensure that root pose does not affect the tracking.
 
 
-0.27.28 (2024-12-09)
+0.27.29 (2024-12-09)
 ~~~~~~~~~~~~~~~~~~~~
 
 Fixed
@@ -161,7 +161,7 @@ Fixed
   return only the states of the specified environment IDs.
 
 
-0.27.27 (2024-12-06)
+0.27.28 (2024-12-06)
 ~~~~~~~~~~~~~~~~~~~~
 
 Fixed
@@ -171,7 +171,7 @@ Fixed
   :attr:`~omni.isaac.lab.assets.Articulation.root_physx_view` level.
 
 
-0.27.26 (2024-12-06)
+0.27.27 (2024-12-06)
 ~~~~~~~~~~~~~~~~~~~~
 
 Changed
@@ -182,7 +182,7 @@ Changed
   disabled. Using an articulation root for rigid bodies is not needed and decreases overall performance.
 
 
-0.27.25 (2024-12-06)
+0.27.26 (2024-12-06)
 ~~~~~~~~~~~~~~~~~~~~
 
 Fixed
@@ -192,7 +192,7 @@ Fixed
   Earlier, the projection names used snakecase instead of camelcase.
 
 
-0.27.24 (2024-12-06)
+0.27.25 (2024-12-06)
 ~~~~~~~~~~~~~~~~~~~~
 
 Added
@@ -210,13 +210,23 @@ Changed
   :class:`~omni.isaac.lab.sensors.Camera` did not clip them and had a different behavior for both types.
 
 
-0.27.23 (2024-12-05)
+0.27.24 (2024-12-05)
 ~~~~~~~~~~~~~~~~~~~~
 
 Fixed
 ^^^^^
 
 * Fixed the condition in ``isaaclab.sh`` that checks whether ``pre-commit`` is installed before attempting installation.
+
+
+0.27.23 (2024-12-04)
+~~~~~~~~~~~~~~~~~~~~
+
+Fixed
+^^^^^
+
+* Added the attributes :attr:`~omni.isaac.lab.envs.DirectRLEnvCfg.wait_for_textures` and :attr:`~omni.isaac.lab.envs.ManagerBasedEnvCfg.wait_for_textures`
+  to enable assets loading check during :class:`~omni.isaac.lab.DirectRLEnv` and :class:`~omni.isaac.lab.ManagerBasedEnv` reset method when rtx sensors are added to the scene.
 
 
 0.27.22 (2024-12-04)
