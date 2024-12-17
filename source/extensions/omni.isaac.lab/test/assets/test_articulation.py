@@ -913,6 +913,7 @@ class TestArticulation(unittest.TestCase):
                         with build_simulation_context(
                             device=device, add_ground_plane=False, auto_add_lighting=True
                         ) as sim:
+                            sim._app_control_on_stop_handle = None
                             articulation_cfg = generate_articulation_cfg(
                                 articulation_type="single_joint", vel_limit=limit, effort_limit=limit
                             )
@@ -1025,6 +1026,7 @@ class TestArticulation(unittest.TestCase):
                         with build_simulation_context(
                             device=device, add_ground_plane=False, auto_add_lighting=True
                         ) as sim:
+                            sim._app_control_on_stop_handle = None
                             articulation_cfg = generate_articulation_cfg(articulation_type="single_joint")
                             articulation, env_pos = generate_articulation(articulation_cfg, num_articulations, device)
                             env_idx = torch.tensor([x for x in range(num_articulations)])
@@ -1142,6 +1144,7 @@ class TestArticulation(unittest.TestCase):
                             with build_simulation_context(
                                 device=device, add_ground_plane=False, auto_add_lighting=True, gravity_enabled=False
                             ) as sim:
+                                sim._app_control_on_stop_handle = None
                                 articulation_cfg = generate_articulation_cfg(articulation_type="anymal")
                                 articulation, env_pos = generate_articulation(
                                     articulation_cfg, num_articulations, device
