@@ -1,7 +1,7 @@
 Changelog
 ---------
 
-0.32.3 (2025-01-02)
+0.32.4 (2025-01-02)
 ~~~~~~~~~~~~~~~~~~~
 
 Added
@@ -10,7 +10,7 @@ Added
 * Added body tracking as an origin type to :class:`omni.isaac.lab.envs.ViewerCfg` and :class:`omni.isaac.lab.envs.ui.ViewportCameraController`.
 
 
-0.32.2 (2024-12-22)
+0.32.3 (2024-12-22)
 ~~~~~~~~~~~~~~~~~~~
 
 Fixed
@@ -19,7 +19,7 @@ Fixed
 * Fixed populating default_joint_stiffness and default_joint_damping values for ImplicitActuator instances in :class:`omni.isaac.lab.assets.Articulation`
 
 
-0.32.1 (2024-12-17)
+0.32.2 (2024-12-17)
 ~~~~~~~~~~~~~~~~~~~
 
 Added
@@ -31,6 +31,19 @@ Added
   :class:`omni.isaac.lab.controllers.OperationalSpaceController`.
 * Added arguments to set specific null-space joint position targets within
   :class:`omni.isaac.lab.envs.mdp.actions.OperationalSpaceControllerAction` class.
+
+
+0.32.1 (2024-12-17)
+~~~~~~~~~~~~~~~~~~~
+
+Changed
+^^^^^^^
+
+* Added a default and generic implementation of the :meth:`get_object_poses` function
+  in the :class:`ManagerBasedRLMimicEnv` class.
+* Added a ``EXPORT_NONE`` mode in the :class:`DatasetExportMode` class and updated
+  :class:`~omni.isaac.lab.managers.RecorderManager` to enable recording without exporting
+  the data to a file.
 
 
 0.32.0 (2024-12-16)
