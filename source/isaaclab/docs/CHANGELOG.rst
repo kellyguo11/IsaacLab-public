@@ -1,7 +1,7 @@
 Changelog
 ---------
 
-0.32.4 (2025-01-02)
+0.33.2 (2025-01-02)
 ~~~~~~~~~~~~~~~~~~~
 
 Added
@@ -10,7 +10,17 @@ Added
 * Added body tracking as an origin type to :class:`omni.isaac.lab.envs.ViewerCfg` and :class:`omni.isaac.lab.envs.ui.ViewportCameraController`.
 
 
-0.32.3 (2024-12-22)
+0.33.1 (2024-12-26)
+~~~~~~~~~~~~~~~~~~~
+
+Changed
+^^^^^^^
+
+* Added kinematics initialization call for populating kinematic prim transforms to fabric for rendering.
+* Added ``enable_env_ids`` flag for cloning and replication to replace collision filtering.
+
+
+0.33.0 (2024-12-22)
 ~~~~~~~~~~~~~~~~~~~
 
 Fixed
