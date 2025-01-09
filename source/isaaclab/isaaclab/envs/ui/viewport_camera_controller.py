@@ -14,7 +14,8 @@ from typing import TYPE_CHECKING
 
 import omni.kit.app
 import omni.timeline
-from omni.isaac.lab.assets.articulation.articulation import Articulation
+
+from isaaclab.assets.articulation.articulation import Articulation
 
 if TYPE_CHECKING:
     from isaaclab.envs import DirectRLEnv, ManagerBasedEnv, ViewerCfg
@@ -217,7 +218,7 @@ class ViewportCameraController:
         cam_target = viewer_origin + self.default_cam_lookat
 
         # set the camera view
-        self._env.sim.set_camera_view(eye=cam_eye, target=cam_target)
+        self._env.unwrapped.sim.set_camera_view(eye=cam_eye, target=cam_target)
 
     """
     Private Functions
