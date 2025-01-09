@@ -49,7 +49,7 @@ class ViewportCameraController:
 
         """
         # store inputs
-        self._env = env
+        self._env = env.unwrapped
         self._cfg = copy.deepcopy(cfg)
         # cast viewer eye and look-at to numpy arrays
         self.default_cam_eye = np.array(self._cfg.eye)
@@ -218,7 +218,7 @@ class ViewportCameraController:
         cam_target = viewer_origin + self.default_cam_lookat
 
         # set the camera view
-        self._env.unwrapped.sim.set_camera_view(eye=cam_eye, target=cam_target)
+        self._env.sim.set_camera_view(eye=cam_eye, target=cam_target)
 
     """
     Private Functions
