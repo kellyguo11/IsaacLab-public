@@ -1,6 +1,16 @@
 Changelog
 ---------
 
+0.34.3 (2025-02-26)
+~~~~~~~~~~~~~~~~~~~
+
+Added
+^^^^^
+
+* Enable specifying the placement of the simulation when viewed in an XR device. This is achieved by
+  adding an ``XrCfg`` environment configuration with ``anchor_pos`` and ``anchor_rot`` parameters.
+
+
 0.34.2 (2025-02-21)
 ~~~~~~~~~~~~~~~~~~~~
 
