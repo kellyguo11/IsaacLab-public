@@ -1,6 +1,16 @@
 Changelog
 ---------
 
+1.0.4 (2025-03-07)
+~~~~~~~~~~~~~~~~~~
+
+Changed
+^^^^^^^
+
+* Updated data generator to support environments with multiple end effectors.
+* Updated data generator to support subtask constraints based on DexMimicGen.
+
+
 1.0.3 (2025-03-06)
 ~~~~~~~~~~~~~~~~~~
 
