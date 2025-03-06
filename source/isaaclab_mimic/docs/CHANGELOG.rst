@@ -1,6 +1,15 @@
 Changelog
 ---------
 
+1.0.3 (2025-03-06)
+~~~~~~~~~~~~~~~~~~
+
+Added
+^^^^^^
+
+* Added absolute pose mimic environment for Franka cube stacking task (:class:`FrankaCubeStackIKAbsMimicEnv`)
+
+
 1.0.2 (2025-01-10)
 ~~~~~~~~~~~~~~~~~~
 
