@@ -1,6 +1,16 @@
 Changelog
 ---------
 
+0.34.4 (2025-02-27)
+~~~~~~~~~~~~~~~~~~~~
+
+Added
+
+^^^^^
+* Refactored retargeting code from Se3Handtracking class into separate modules for better modularity
+* Added scaffolding for developing additional retargeters (e.g. dex)
+
+
 0.34.3 (2025-02-26)
 ~~~~~~~~~~~~~~~~~~~
 
