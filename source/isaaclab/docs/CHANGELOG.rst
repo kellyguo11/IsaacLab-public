@@ -1,7 +1,7 @@
 Changelog
 ---------
 
-0.36.5 (2025-03-24)
+0.36.6 (2025-03-24)
 ~~~~~~~~~~~~~~~~~~~
 
 Changed
@@ -11,7 +11,7 @@ Changed
   the default settings will be used from the experience files and the double definition is removed.
 
 
-0.36.4 (2025-03-17)
+0.36.5 (2025-03-17)
 ~~~~~~~~~~~~~~~~~~~
 
 Fixed
@@ -21,13 +21,24 @@ Fixed
   :attr:`effort_limit` is set.
 
 
+0.36.4 (2025-03-11)
+~~~~~~~~~~~~~~~~~~~
+
+Changed
+^^^^^^^
+
+* Updated the OpenXR kit file ``isaaclab.python.xr.openxr.kit`` to inherit from ``isaaclab.python.kit`` instead of
+  ``isaaclab.python.rendering.kit`` which is not appropriate.
+
+
 0.36.3 (2025-03-10)
 ~~~~~~~~~~~~~~~~~~~~
 
 Changed
 ^^^^^^^
 
-* Added the PinkIKController controller class that interfaces Isaac Lab with the Pink differential inverse kinematics solver to allow control of multiple links in a robot using a single solver.
+* Added the PinkIKController controller class that interfaces Isaac Lab with the Pink differential inverse kinematics solver
+  to allow control of multiple links in a robot using a single solver.
 
 
 0.36.2 (2025-03-07)
