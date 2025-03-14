@@ -1,7 +1,7 @@
 Changelog
 ---------
 
-0.36.7 (2025-03-24)
+0.36.8 (2025-03-24)
 ~~~~~~~~~~~~~~~~~~~
 
 Changed
@@ -11,7 +11,7 @@ Changed
   the default settings will be used from the experience files and the double definition is removed.
 
 
-0.36.6 (2025-03-17)
+0.36.7 (2025-03-17)
 ~~~~~~~~~~~~~~~~~~~
 
 Fixed
@@ -19,6 +19,16 @@ Fixed
 
 * Fixed default behavior of :class:`~isaaclab.actuators.ImplicitActuator` if no :attr:`effort_limits_sim` or
   :attr:`effort_limit` is set.
+
+
+0.36.6 (2025-03-13)
+~~~~~~~~~~~~~~~~~~~
+
+Fixed
+^^^^^
+
+* Worked around an issue where the render mode is set to ``"RayTracedLighting"`` instead of ``"RaytracedLighting"`` by
+  some dependencies.
 
 
 0.36.5 (2025-03-11)
