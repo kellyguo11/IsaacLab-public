@@ -1,7 +1,7 @@
 Changelog
 ---------
 
-0.36.10 (2025-03-24)
+0.36.11 (2025-03-24)
 ~~~~~~~~~~~~~~~~~~~~
 
 Changed
@@ -11,14 +11,23 @@ Changed
   the default settings will be used from the experience files and the double definition is removed.
 
 
-0.36.9 (2025-03-17)
-~~~~~~~~~~~~~~~~~~~
+0.36.10 (2025-03-17)
+~~~~~~~~~~~~~~~~~~~~
 
 Fixed
 ^^^^^
 
 * Fixed default behavior of :class:`~isaaclab.actuators.ImplicitActuator` if no :attr:`effort_limits_sim` or
   :attr:`effort_limit` is set.
+
+
+0.36.9 (2025-03-18)
+~~~~~~~~~~~~~~~~~~~
+
+Added
+^^^^^^^
+
+* Xr rendering mode, which is default when xr is used.
 
 
 0.36.8 (2025-03-17)
