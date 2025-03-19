@@ -86,6 +86,7 @@ Guidelines for modifications:
 * Oyindamola Omotuyi
 * Özhan Özen
 * Peter Du
+* Pulkit Goyal
 * Qian Wan
 * Qinxi Yu
 * Rafael Wiltz
