@@ -321,8 +321,8 @@ Added
 ~~~~~~~~~~~~~~~~~~~~
 
 Added
-
 ^^^^^
+
 * Refactored retargeting code from Se3Handtracking class into separate modules for better modularity
 * Added scaffolding for developing additional retargeters (e.g. dex)
 
