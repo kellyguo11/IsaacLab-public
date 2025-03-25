@@ -1,6 +1,14 @@
 Changelog
 ---------
 
+0.36.15 (2025-03-25)
+~~~~~~~~~~~~~~~~~~~~
+
+Added
+^^^^^^^
+
+* Added near plane distance configuration for XR device.
+
 0.36.14 (2025-03-24)
 ~~~~~~~~~~~~~~~~~~~~
 
