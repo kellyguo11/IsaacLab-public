@@ -1,6 +1,15 @@
 Changelog
 ---------
 
+0.36.16 (2025-03-25)
+~~~~~~~~~~~~~~~~~~~~
+
+Changed
+^^^^^^^
+
+* Modified rendering mode default behavior when the launcher arg :attr:`enable_cameras` is not set.
+
+
 0.36.15 (2025-03-25)
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -8,6 +17,7 @@ Added
 ^^^^^^^
 
 * Added near plane distance configuration for XR device.
+
 
 0.36.14 (2025-03-24)
 ~~~~~~~~~~~~~~~~~~~~
