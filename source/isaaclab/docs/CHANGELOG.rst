@@ -1,6 +1,15 @@
 Changelog
 ---------
 
+0.36.17 (2025-03-26)
+~~~~~~~~~~~~~~~~~~~~
+
+Changed
+^^^^^^^
+
+* Added override in AppLauncher to apply patch for ``pxr.Gf.Matrix4d`` to work with Pinocchio 2.7.0.
+
+
 0.36.16 (2025-03-25)
 ~~~~~~~~~~~~~~~~~~~~
 
