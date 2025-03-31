@@ -1,6 +1,16 @@
 Changelog
 ---------
 
+0.36.18 (2025-03-26)
+~~~~~~~~~~~~~~~~~~~~
+
+Added
+^^^^^
+
+* Added a dynamic text instruction widget that provides real-time feedback
+  on the number of successful recordings during demonstration sessions.
+
+
 0.36.17 (2025-03-26)
 ~~~~~~~~~~~~~~~~~~~~
 
