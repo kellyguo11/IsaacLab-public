@@ -159,7 +159,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     resume_path = retrieve_file_path(args_cli.checkpoint) if args_cli.checkpoint else None
 
     # create isaac environment
-    env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+    env = gym.make_vec(
+        args_cli.task,
+        env_cfg.scene.num_envs,
+        vectorization_mode="vector_entry_point",
+        cfg=env_cfg,
+        render_mode="rgb_array" if args_cli.video else None,
+    )
 
     # convert to single-agent instance if required by the RL algorithm
     if isinstance(env.unwrapped, DirectMARLEnv) and algorithm in ["ppo"]:

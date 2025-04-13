@@ -23,7 +23,7 @@ from .manager_based_env import ManagerBasedEnv
 from .manager_based_rl_env_cfg import ManagerBasedRLEnvCfg
 
 
-class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
+class ManagerBasedRLEnv(ManagerBasedEnv, gym.vector.VectorEnv):
     """The superclass for the manager-based workflow reinforcement learning-based environments.
 
     This class inherits from :class:`ManagerBasedEnv` and implements the core functionality for
