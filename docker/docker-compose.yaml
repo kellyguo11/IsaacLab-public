@@ -136,6 +136,62 @@ services:
     stdin_open: true
     tty: true
 
+  # This service adds CUDA
+  # installation on top of the base image
+  isaac-lab-cuda:
+    profiles: [ "cuda" ]
+    env_file:
+      - .env.base
+      - .env.cuda
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.cuda
+      args:
+        # CUDA version configuration
+        - CUDA_VERSION_ARG=${CUDA_VERSION}
+        - CUDA_DRIVER_VERSION_ARG=${CUDA_DRIVER_VERSION}
+        - CUDA_ARCH_ARG=${CUDA_ARCH}
+        - CUDA_MAJOR_VERSION_ARG=${CUDA_MAJOR_VERSION}
+        # Make sure that the correct Docker Name Suffix is being passed to the dockerfile, to know which base image to
+        # start from.
+        - DOCKER_NAME_SUFFIX=${DOCKER_NAME_SUFFIX-}
+    image: isaac-lab-cuda${DOCKER_NAME_SUFFIX-}
+    container_name: isaac-lab-cuda${DOCKER_NAME_SUFFIX-}
+    environment: *default-isaac-lab-environment
+    volumes: *default-isaac-lab-volumes
+    network_mode: host
+    deploy: *default-isaac-lab-deploy
+    # This is the entrypoint for the container
+    entrypoint: bash
+    stdin_open: true
+    tty: true
+
+  # This service adds cuRobo
+  # on top of the CUDA image
+  isaac-lab-curobo:
+    profiles: [ "curobo" ]
+    env_file:
+      - .env.base
+      - .env.curobo
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.curobo
+      args:
+        # cuRobo-specific build arguments
+        - TORCH_CUDA_ARCH_LIST_ARG=${TORCH_CUDA_ARCH_LIST}
+        # Make sure that the correct Docker Name Suffix is being passed to the dockerfile
+        - DOCKER_NAME_SUFFIX=${DOCKER_NAME_SUFFIX-}
+    image: isaac-lab-curobo${DOCKER_NAME_SUFFIX-}
+    container_name: isaac-lab-curobo${DOCKER_NAME_SUFFIX-}
+    environment: *default-isaac-lab-environment
+    volumes: *default-isaac-lab-volumes
+    network_mode: host
+    deploy: *default-isaac-lab-deploy
+    # This is the entrypoint for the container
+    entrypoint: bash
+    stdin_open: true
+    tty: true
+
 volumes:
   # isaac-sim
   isaac-cache-kit:

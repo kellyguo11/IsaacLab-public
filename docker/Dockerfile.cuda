@@ -1,0 +1,54 @@
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+# What is the docker name suffix for the base image to load? (defaults to empty string)
+ARG DOCKER_NAME_SUFFIX=""
+
+FROM isaac-lab-base${DOCKER_NAME_SUFFIX} AS cuda13
+
+# Set default RUN shell to bash
+SHELL ["/bin/bash", "-c"]
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+
+# CUDA configuration arguments
+ARG CUDA_VERSION_ARG
+ARG CUDA_DRIVER_VERSION_ARG  
+ARG CUDA_ARCH_ARG
+ARG CUDA_MAJOR_VERSION_ARG
+
+# Convert ARGs to ENV variables for runtime access
+ENV CUDA_VERSION=${CUDA_VERSION_ARG}
+ENV CUDA_DRIVER_VERSION=${CUDA_DRIVER_VERSION_ARG}
+ENV CUDA_ARCH=${CUDA_ARCH_ARG}
+ENV CUDA_MAJOR_VERSION=${CUDA_MAJOR_VERSION_ARG}
+
+USER root
+
+# Install dependencies for CUDA installation
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    && apt -y autoremove && apt clean autoclean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Download and install CUDA using configurable version
+RUN CUDA_INSTALLER="cuda_${CUDA_VERSION}_${CUDA_DRIVER_VERSION}_${CUDA_ARCH}.run" && \
+    wget -q "https://developer.download.nvidia.com/compute/cuda/${CUDA_VERSION}/local_installers/${CUDA_INSTALLER}" && \
+    chmod +x "${CUDA_INSTALLER}" && \
+    "./${CUDA_INSTALLER}" --silent && \
+    rm "${CUDA_INSTALLER}"
+
+# Set CUDA environment variables using configurable paths
+ENV PATH=/usr/local/cuda-${CUDA_MAJOR_VERSION}/bin:$PATH
+ENV LD_LIBRARY_PATH=/usr/local/cuda-${CUDA_MAJOR_VERSION}/lib64:$LD_LIBRARY_PATH
+
+# Add CUDA environment variables to .bashrc for interactive shells
+RUN echo "export PATH=/usr/local/cuda-${CUDA_MAJOR_VERSION}/bin:\$PATH" >> ${HOME}/.bashrc && \
+    echo "export LD_LIBRARY_PATH=/usr/local/cuda-${CUDA_MAJOR_VERSION}/lib64:\$LD_LIBRARY_PATH" >> ${HOME}/.bashrc
+
+# Verify CUDA installation
+RUN nvcc --version || echo "CUDA ${CUDA_VERSION} installed successfully"
