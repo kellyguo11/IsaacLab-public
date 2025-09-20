@@ -41,7 +41,7 @@ parser.add_argument(
     "--num_envs",
     type=int,
     nargs="+",
-    default=[12, 24, 48],   # [256, 512, 1024],
+    default=[12, 24, 48, 256, 512, 1024],
     help="List of environment counts to benchmark (e.g., 256 512 1024).",
 )
 parser.add_argument(
@@ -53,7 +53,7 @@ parser.add_argument(
 parser.add_argument(
     "--resolutions",
     type=str,
-    default="240x320,480x640",
+    default="64x64,128x128,256x256,240x320,480x640",
     help="Comma-separated list of HxW resolutions, e.g., 240x320,480x640",
 )
 parser.add_argument("--steps", type=int, default=500, help="Steps per run to time.")
@@ -303,6 +303,9 @@ def main():
             for camera in cameras: 
                 # USD Camera              
                 if camera == "usd_camera":
+                    # only benchmark low numbers for USD camera
+                    if num_envs > 100:
+                        continue
                     single_scene_cfg = _make_scene_cfg_usd(
                         num_envs=num_envs,
                         height=resolution[0],
@@ -325,14 +328,14 @@ def main():
                 
                 # Multi-Mesh RayCaster Camera
                 elif camera == "ray_caster_camera":
-                    # single_scene_cfg = _make_scene_cfg_ray_caster(
-                    #     num_envs=num_envs,
-                    #     height=resolution[0],
-                    #     width=resolution[1],
-                    #     data_types=data_types,
-                    #     debug_vis=not args_cli.headless,
-                    # )
-                    # result = _run_benchmark(single_scene_cfg, "ray_caster_camera")
+                    single_scene_cfg = _make_scene_cfg_ray_caster(
+                        num_envs=num_envs,
+                        height=resolution[0],
+                        width=resolution[1],
+                        data_types=data_types,
+                        debug_vis=not args_cli.headless,
+                    )
+                    result = _run_benchmark(single_scene_cfg, "ray_caster_camera")
                     continue
             
                 result["num_envs"] = num_envs
