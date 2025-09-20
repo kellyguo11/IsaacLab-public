@@ -38,7 +38,7 @@ parser.add_argument("--warmup", type=int, default=50, help="Warmup steps before 
 # Num assets for benchmarking memory usage with and without caching.
 NUM_ASSETS_MEMORY = [1, 2, 4, 8, 16, 32]  
  # Num assets for benchmarking scaling performance. of multi-mesh ray caster.
-NUM_ASSETS = [0, 1, 2, 4, 8, 16, 32, 64, 128]
+NUM_ASSETS = [0, 1, 2, 4, 8, 16]#, 32, 64, 128]
 # Num envs for benchmarking single vs multi mesh ray caster. 
 NUM_ENVS = [32, 64, 128, 256, 512, 1024, 2048, 4096]  
 # Num subdivisions for benchmarking mesh complexity.
