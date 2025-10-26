@@ -460,6 +460,7 @@ class InteractiveScene:
         for sensor in self._sensors.values():
             sensor.reset(env_ids)
 
+    @carb.profiler.profile
     def write_data_to_sim(self):
         """Writes the data of the scene entities to the simulation."""
         # -- assets

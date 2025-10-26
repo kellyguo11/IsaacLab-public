@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import carb
 import torch
 import warnings
 from typing import TYPE_CHECKING
@@ -157,6 +158,7 @@ class SurfaceGripper(AssetBase):
             indices=indices_as_list,
         )
 
+    @carb.profiler.profile
     def update(self, dt: float) -> None:
         """Update the gripper state using the SurfaceGripperView.
 
@@ -175,8 +177,14 @@ class SurfaceGripper(AssetBase):
             We need to do this conversion for every single step of the simulation because the gripper can lose contact
             with the object if some conditions are met: such as if a large force is applied to the gripped object.
         """
+        import time
+        time0 = time.time()
         state_list: list[int] = self._gripper_view.get_surface_gripper_status()
+        time1 = time.time()
         self._gripper_state = torch.tensor(state_list, dtype=torch.float32, device=self._device) - 1.0
+        time2 = time.time()
+        # print(f"SurfaceGripperView.get_surface_gripper_status() time: {time1 - time0:.6f}s")
+        # print(f"SurfaceGripper state tensor conversion time: {time2 - time1:.6f}s")
 
     def write_data_to_sim(self) -> None:
         """Write the gripper command to the SurfaceGripperView.
@@ -188,15 +196,21 @@ class SurfaceGripper(AssetBase):
 
         The Do nothing command is not applied, and is only used to indicate whether the gripper state has changed.
         """
+        import time
+        time0 = time.time()
         # Remove the SurfaceGripper indices that have a commanded value of 2
         indices = (
             torch.argwhere(torch.logical_or(self._gripper_command < -0.3, self._gripper_command > 0.3))
             .to(torch.int32)
             .tolist()
         )
+        time1 = time.time()
         # Write to the SurfaceGripperView if there are any indices to write to
         if len(indices) > 0:
             self._gripper_view.apply_gripper_action(self._gripper_command.tolist(), indices)
+        time2 = time.time()
+        # print(f"SurfaceGripper write_data_to_sim indices extraction time: {time1 - time0:.6f}s")
+        # print(f"SurfaceGripperView.apply_gripper_action() time: {time2 - time1:.6f}s")
 
     def set_grippers_command(self, states: torch.Tensor, indices: torch.Tensor | None = None) -> None:
         """Set the internal gripper command buffer. This function does not write to the simulation.
@@ -254,12 +268,14 @@ class SurfaceGripper(AssetBase):
         enable_extension("isaacsim.robot.surface_gripper")
         from isaacsim.robot.surface_gripper import GripperView
 
-        # Check that we are using the CPU backend.
-        if self._device != "cpu":
-            raise Exception(
-                "SurfaceGripper is only supported on CPU for now. Please set the simulation backend to run on CPU. Use"
-                " `--device cpu` to run the simulation on CPU."
-            )
+        print('self._device', self._device)
+
+        # # Check that we are using the CPU backend.
+        # if self._device != "cpu":
+        #     raise Exception(
+        #         "SurfaceGripper is only supported on CPU for now. Please set the simulation backend to run on CPU. Use"
+        #         " `--device cpu` to run the simulation on CPU."
+        #     )
 
         # obtain the first prim in the regex expression (all others are assumed to be a copy of this)
         template_prim = sim_utils.find_first_matching_prim(self._cfg.prim_path)

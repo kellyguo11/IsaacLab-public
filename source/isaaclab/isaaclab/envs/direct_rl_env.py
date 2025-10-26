@@ -16,6 +16,7 @@ from abc import abstractmethod
 from collections.abc import Sequence
 from dataclasses import MISSING
 from typing import Any, ClassVar
+import carb
 
 import isaacsim.core.utils.torch as torch_utils
 import omni.kit.app
@@ -310,6 +311,7 @@ class DirectRLEnv(gym.Env):
         # return observations
         return self._get_observations(), self.extras
 
+    @carb.profiler.profile
     def step(self, action: torch.Tensor) -> VecEnvStepReturn:
         """Execute one time-step of the environment's dynamics.
 
