@@ -27,77 +27,6 @@ if TYPE_CHECKING:
     from .tiled_camera_cfg import TiledCameraCfg
 
 
-def mosaic_to_tiles_pytorch(
-    n: int,
-    m: int,
-    mosaic: torch.Tensor,
-    flatten: bool = True,
-) -> torch.Tensor:
-    """Split a mosaic (N*H, M*W, 3) back into tiles in a tensor shape (N*M, H, W, 3).
-
-    Args:
-        n: Number of tile rows N.
-        m: Number of tile columns M.
-        mosaic: Input mosaic with shape (N*H, M*W, 3), dtype uint8.
-        flatten: If True, return shape (N*M, H, W, 3);
-            otherwise (N, M, H, W, 3).
-
-    Returns:
-        Tiles with shape (N*M, H, W, 3) if flatten=True, else (N, M, H, W, 3).
-    """
-    if mosaic.ndim != 3:# or mosaic.shape[2] != 3:
-        raise ValueError("mosaic must have shape (N*H, M*W, 3)")
-
-    total_h, total_w, num_channels = mosaic.shape
-    if total_h % n != 0 or total_w % m != 0:
-        raise ValueError("mosaic dimensions are not divisible by (N, M)")
-
-    h = total_h // n
-    w = total_w // m
-
-    # Inverse of: tiles.transpose(0, 2, 1, 3, 4).reshape(N*H, M*W, 3)
-    as_5d_n_h_m_w = mosaic.reshape(n, h, m, w, num_channels)
-    tiles_5d = as_5d_n_h_m_w.permute(0, 2, 1, 3, 4)
-    if flatten:
-        return tiles_5d.reshape(n * m, h, w, num_channels).contiguous()
-    return tiles_5d
-
-
-def reshape_with_pytorch(
-    tiled_buffer: torch.Tensor,
-    num_cameras: int,
-    height: int,
-    width: int,
-    num_channels: int,
-    num_tiles_x: int,
-) -> torch.Tensor:
-    """PyTorch implementation that mimics the warp kernel behavior.
-
-    Args:
-        tiled_buffer: Flattened 1D buffer of shape (height * width * num_channels * num_cameras,)
-        num_cameras: Number of cameras
-        height: Image height
-        width: Image width
-        num_channels: Number of channels (e.g., 3 for RGB)
-        num_tiles_x: Number of tiles in x-direction
-
-    Returns:
-        Batched images of shape (num_cameras, height, width, num_channels)
-    """
-    num_tiles_y = math.ceil(num_cameras / num_tiles_x)
-
-    # Reshape from 1D to tiled mosaic format
-    # The tiled buffer is laid out as (total_height, total_width, num_channels)
-    total_height = num_tiles_y * height
-    total_width = num_tiles_x * width
-
-    # Reshape the flat buffer into mosaic format
-    mosaic = tiled_buffer.reshape(total_height, total_width, num_channels)
-
-    # Use the mosaic_to_tiles function
-    return mosaic_to_tiles_pytorch(num_tiles_y, num_tiles_x, mosaic, flatten=True)
-
-
 class TiledCamera(Camera):
     r"""The tiled rendering based camera sensor for acquiring the same data as the Camera class.
 
@@ -143,12 +72,6 @@ class TiledCamera(Camera):
 
     cfg: TiledCameraCfg
     """The configuration parameters."""
-    
-    # Profiling attributes
-    _profile_warp_times: list[float] = []
-    _profile_pytorch_times: list[float] = []
-    _profile_iteration: int = 0
-    _profile_max_iters: int = 1000  # Profile for first 1000 iterations
 
     def __init__(self, cfg: TiledCameraCfg):
         """Initializes the tiled camera sensor.
@@ -348,146 +271,18 @@ class TiledCamera(Camera):
             if data_type == "motion_vectors":
                 tiled_data_buffer = tiled_data_buffer[:, :, :2].contiguous()
 
-            # Use PyTorch implementation for reshape
-            self._data.output[data_type][:self._view.count] = reshape_with_pytorch(
-                wp.to_torch(tiled_data_buffer.flatten()),
-                self._view.count,
-                self.cfg.height,
-                self.cfg.width,
-                self._data.output[data_type].shape[-1],
-                self._tiling_grid_shape()[0],
-            )[:self._view.count]
-
-            # wp.launch(
-            #         kernel=reshape_tiled_image,
-            #         dim=(self._view.count, self.cfg.height, self.cfg.width),
-            #         inputs=[
-            #             tiled_data_buffer.flatten(),
-            #             wp.from_torch(self._data.output[data_type]),  # zero-copy alias
-            #             *list(self._data.output[data_type].shape[1:]),  # height, width, num_channels
-            #             self._tiling_grid_shape()[0],  # num_tiles_x
-            #         ],
-            #         device=self.device,
-            #     )
-
-            # Profile both approaches
-            # if self._profile_iteration < self._profile_max_iters:
-            # Profile Warp kernel approach
-            start_event_warp = torch.cuda.Event(enable_timing=True)
-            end_event_warp = torch.cuda.Event(enable_timing=True)
-
-            warp_output = wp.from_torch(torch.zeros_like(self._data.output[data_type]))
-            
-            start_event_warp.record()
+            # Use warp kernel to reshape tiled image buffer to batched image buffer
             wp.launch(
                 kernel=reshape_tiled_image,
                 dim=(self._view.count, self.cfg.height, self.cfg.width),
                 inputs=[
                     tiled_data_buffer.flatten(),
-                    warp_output,  # zero-copy alias
+                    wp.from_torch(self._data.output[data_type]),  # zero-copy alias
                     *list(self._data.output[data_type].shape[1:]),  # height, width, num_channels
                     self._tiling_grid_shape()[0],  # num_tiles_x
                 ],
                 device=self.device,
             )
-            end_event_warp.record()
-            torch.cuda.synchronize()
-            warp_time = start_event_warp.elapsed_time(end_event_warp)
-            
-            # Profile PyTorch approach
-            start_event_pytorch = torch.cuda.Event(enable_timing=True)
-            end_event_pytorch = torch.cuda.Event(enable_timing=True)
-            
-            # Store original data to restore later
-            original_output = self._data.output[data_type].clone()
-            
-            start_event_pytorch.record()
-            pytorch_result = reshape_with_pytorch(
-                wp.to_torch(tiled_data_buffer.flatten()),
-                self._view.count,
-                self.cfg.height,
-                self.cfg.width,
-                self._data.output[data_type].shape[-1],
-                self._tiling_grid_shape()[0],
-            )[:self._view.count]
-            end_event_pytorch.record()
-            torch.cuda.synchronize()
-            pytorch_time = start_event_pytorch.elapsed_time(end_event_pytorch)
-
-            warp_output = wp.to_torch(warp_output)
-            
-            # Check if results are close (use appropriate tolerance for dtype)
-            if warp_output.dtype in [torch.float32, torch.float16, torch.float64]:
-                # For floating point, use relative and absolute tolerance
-                rtol = 1e-5
-                atol = 1e-6
-                are_close = torch.allclose(warp_output, pytorch_result, rtol=rtol, atol=atol)
-                if not are_close:
-                    max_diff = torch.max(torch.abs(warp_output - pytorch_result)).item()
-                    mean_diff = torch.mean(torch.abs(warp_output - pytorch_result)).item()
-                    raise AssertionError(
-                        f"Warp and PyTorch outputs differ for {data_type}! "
-                        f"Max diff: {max_diff:.6e}, Mean diff: {mean_diff:.6e}, "
-                        f"rtol: {rtol}, atol: {atol}"
-                    )
-            else:
-                # For integer types, require exact match
-                are_equal = torch.equal(warp_output, pytorch_result)
-                if not are_equal:
-                    num_diff = torch.sum(warp_output != pytorch_result).item()
-                    total = warp_output.numel()
-                    raise AssertionError(
-                        f"Warp and PyTorch outputs differ for {data_type}! "
-                        f"{num_diff}/{total} elements differ ({100*num_diff/total:.2f}%)"
-                    )
-            
-            # Restore original data (we want to use warp output)
-            self._data.output[data_type].copy_(original_output)
-            
-            # Store timings
-            self._profile_warp_times.append(warp_time)
-            self._profile_pytorch_times.append(pytorch_time)
-            
-            # Print every 100 iterations
-            if (self._profile_iteration + 1) % 100 == 0:
-                avg_warp = sum(self._profile_warp_times) / len(self._profile_warp_times)
-                avg_pytorch = sum(self._profile_pytorch_times) / len(self._profile_pytorch_times)
-                speedup = avg_pytorch / avg_warp if avg_warp > 0 else 0
-                print(f"\n{'='*80}")
-                print(f"Camera Reshape Profiling Results (Iteration {self._profile_iteration + 1}/{self._profile_max_iters}):")
-                print(f"  Warp Kernel:   {avg_warp:.3f} ms (avg)")
-                print(f"  PyTorch:       {avg_pytorch:.3f} ms (avg)")
-                print(f"  Speedup:       {speedup:.2f}x ({'Warp faster' if speedup > 1 else 'PyTorch faster'})")
-                print(f"  Accuracy:      ✓ Results match (validated every iteration)")
-                print(f"{'='*80}\n")
-            
-            self._profile_iteration += 1
-            
-            # Final summary after profiling period
-            if self._profile_iteration == self._profile_max_iters:
-                avg_warp = sum(self._profile_warp_times) / len(self._profile_warp_times)
-                avg_pytorch = sum(self._profile_pytorch_times) / len(self._profile_pytorch_times)
-                speedup = avg_pytorch / avg_warp if avg_warp > 0 else 0
-                print(f"\n{'='*80}")
-                print(f"FINAL Camera Reshape Profiling Results ({self._profile_max_iters} iterations):")
-                print(f"  Warp Kernel:   {avg_warp:.3f} ms (avg), min: {min(self._profile_warp_times):.3f} ms, max: {max(self._profile_warp_times):.3f} ms")
-                print(f"  PyTorch:       {avg_pytorch:.3f} ms (avg), min: {min(self._profile_pytorch_times):.3f} ms, max: {max(self._profile_pytorch_times):.3f} ms")
-                print(f"  Speedup:       {speedup:.2f}x ({'Warp faster' if speedup > 1 else 'PyTorch faster'})")
-                print(f"  Accuracy:      ✓ All {self._profile_max_iters} iterations passed validation")
-                print(f"{'='*80}\n")
-            # else:
-            #     # After profiling period, just use Warp kernel
-            #     wp.launch(
-            #         kernel=reshape_tiled_image,
-            #         dim=(self._view.count, self.cfg.height, self.cfg.width),
-            #         inputs=[
-            #             tiled_data_buffer.flatten(),
-            #             wp.from_torch(self._data.output[data_type]),  # zero-copy alias
-            #             *list(self._data.output[data_type].shape[1:]),  # height, width, num_channels
-            #             self._tiling_grid_shape()[0],  # num_tiles_x
-            #         ],
-            #         device=self.device,
-            #     )
 
             # alias rgb as first 3 channels of rgba
             if data_type == "rgba" and "rgb" in self.cfg.data_types:
