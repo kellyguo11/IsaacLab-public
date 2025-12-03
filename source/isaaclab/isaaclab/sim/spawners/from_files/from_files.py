@@ -321,7 +321,7 @@ def _spawn_from_usd_file(
     # Download remote files (S3, HTTP, HTTPS) to local cache
     # This also downloads all USD dependencies to maintain references
     if file_status == 2:
-        usd_path = _download_usd_with_dependencies(usd_path)
+        usd_path = retrieve_file_path(usd_path)
     # spawn asset if it doesn't exist.
     if not prim_utils.is_prim_path_valid(prim_path):
         # add prim as reference to stage
