@@ -14,15 +14,16 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
-import omni.kit.app
-import omni.timeline
-from isaacsim.core.simulation_manager import IsaacEvents, SimulationManager
-
 import isaaclab.sim as sim_utils
 import isaaclab.sim.utils.prims as prim_utils
 from isaaclab.sim import SimulationContext
 from isaaclab.sim._impl.newton_manager import NewtonManager
 from isaaclab.sim.utils.stage import get_current_stage
+
+# import omni.kit.app
+# import omni.timeline
+# from isaacsim.core.simulation_manager import IsaacEvents, SimulationManager
+
 
 if TYPE_CHECKING:
     from .asset_base_cfg import AssetBaseCfg
@@ -75,8 +76,14 @@ class AssetBase(ABC):
         # get stage handle
         self.stage = get_current_stage()
 
+        # check if base asset path is valid
+        # note: currently the spawner does not work if there is a regex pattern in the leaf
+        #   For example, if the prim path is "/World/Robot_[1,2]" since the spawner will not
+        #   know which prim to spawn. This is a limitation of the spawner and not the asset.
+        asset_path = self.cfg.prim_path.split("/")[-1]
+        asset_path_is_regex = re.match(r"^[a-zA-Z0-9/_]+$", asset_path) is None
         # spawn the asset
-        if self.cfg.spawn is not None:
+        if self.cfg.spawn is not None and not asset_path_is_regex:
             self.cfg.spawn.func(
                 self.cfg.prim_path,
                 self.cfg.spawn,
@@ -84,9 +91,9 @@ class AssetBase(ABC):
                 orientation=self.cfg.init_state.rot,
             )
         # check that spawn was successful
-        matching_prims = sim_utils.find_matching_prims(self.cfg.prim_path)
-        if len(matching_prims) == 0:
-            raise RuntimeError(f"Could not find prim with path {self.cfg.prim_path}.")
+        # matching_prims = sim_utils.find_matching_prims(self.cfg.prim_path)
+        # if len(matching_prims) == 0:
+        #     raise RuntimeError(f"Could not find prim with path {self.cfg.prim_path}.")
 
         # register simulator callbacks (with weakref safety to avoid crashes on deletion)
         def safe_callback(callback_name, event, obj_ref):
@@ -101,7 +108,7 @@ class AssetBase(ABC):
         # note: use weakref on callbacks to ensure that this object can be deleted when its destructor is called.
         # add callbacks for stage play/stop
         obj_ref = weakref.proxy(self)
-        timeline_event_stream = omni.timeline.get_timeline_interface().get_timeline_event_stream()
+        # timeline_event_stream = omni.timeline.get_timeline_interface().get_timeline_event_stream()
 
         # the order is set to 10 which is arbitrary but should be lower priority than the default order of 0
         # register timeline PLAY event callback (lower priority with order=10)
@@ -112,17 +119,17 @@ class AssetBase(ABC):
         #    order=10,
         # )
 
-        # register timeline STOP event callback (lower priority with order=10)
-        self._invalidate_initialize_handle = timeline_event_stream.create_subscription_to_pop_by_type(
-            int(omni.timeline.TimelineEventType.STOP),
-            lambda event, obj_ref=obj_ref: safe_callback("_invalidate_initialize_callback", event, obj_ref),
-            order=10,
-        )
-        # register prim deletion callback
-        self._prim_deletion_callback_id = SimulationManager.register_callback(
-            lambda event, obj_ref=obj_ref: safe_callback("_on_prim_deletion", event, obj_ref),
-            event=IsaacEvents.PRIM_DELETION,
-        )
+        # # register timeline STOP event callback (lower priority with order=10)
+        # self._invalidate_initialize_handle = timeline_event_stream.create_subscription_to_pop_by_type(
+        #     int(omni.timeline.TimelineEventType.STOP),
+        #     lambda event, obj_ref=obj_ref: safe_callback("_invalidate_initialize_callback", event, obj_ref),
+        #     order=10,
+        # )
+        # # register prim deletion callback
+        # self._prim_deletion_callback_id = SimulationManager.register_callback(
+        #     lambda event, obj_ref=obj_ref: safe_callback("_on_prim_deletion", event, obj_ref),
+        #     event=IsaacEvents.PRIM_DELETION,
+        # )
 
         # add handle for debug visualization (this is set to a valid handle inside set_debug_vis)
         self._debug_vis_handle = None
@@ -131,8 +138,10 @@ class AssetBase(ABC):
 
     def __del__(self):
         """Unsubscribe from the callbacks."""
-        # clear events handles
-        self._clear_callbacks()
+        # Suppress errors during Python shutdown
+        with contextlib.suppress(ImportError, AttributeError, TypeError):
+            # clear events handles
+            self._clear_callbacks()
 
     """
     Properties
@@ -226,10 +235,17 @@ class AssetBase(ABC):
         if debug_vis:
             # create a subscriber for the post update event if it doesn't exist
             if self._debug_vis_handle is None:
-                app_interface = omni.kit.app.get_app_interface()
-                self._debug_vis_handle = app_interface.get_post_update_event_stream().create_subscription_to_pop(
-                    lambda event, obj=weakref.proxy(self): obj._debug_vis_callback(event)
-                )
+                with contextlib.suppress(ImportError):
+                    import omni.kit.app
+
+                    app_interface = omni.kit.app.get_app_interface()
+                    self._debug_vis_handle = app_interface.get_post_update_event_stream().create_subscription_to_pop(
+                        lambda event, obj=weakref.proxy(self): obj._debug_vis_callback(event)
+                    )
+                # app_interface = omni.kit.app.get_app_interface()
+                # self._debug_vis_handle = app_interface.get_post_update_event_stream().create_subscription_to_pop(
+                #     lambda event, obj=weakref.proxy(self): obj._debug_vis_callback(event)
+                # )
         else:
             # remove the subscriber if it exists
             if self._debug_vis_handle is not None:
@@ -302,8 +318,9 @@ class AssetBase(ABC):
         """
         if not self._is_initialized:
             # obtain simulation related information
-            self._backend = SimulationManager.get_backend()
-            self._device = SimulationManager.get_physics_sim_device()
+            # self._backend = SimulationManager.get_backend()
+            # self._device = SimulationManager.get_physics_sim_device()
+            self._device = SimulationContext.instance().device
             # initialize the asset
             try:
                 self._initialize_impl()

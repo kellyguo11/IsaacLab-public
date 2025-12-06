@@ -8,23 +8,23 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-import omni.kit.commands
-from pxr import Gf, Sdf, Usd
+# import omni.kit.commands
+from pxr import Gf, Sdf, Usd, UsdGeom
 
 import isaaclab.sim.utils.prims as prim_utils
 
-# from Isaac Sim 4.2 onwards, pxr.Semantics is deprecated
-try:
-    import Semantics
-except ModuleNotFoundError:
-    from pxr import Semantics
+# # from Isaac Sim 4.2 onwards, pxr.Semantics is deprecated
+# try:
+#     import Semantics
+# except ModuleNotFoundError:
+#     from pxr import Semantics
 
 from isaaclab.sim import converters, schemas
 from isaaclab.sim.utils import (
     bind_physics_material,
     bind_visual_material,
     clone,
-    is_current_stage_in_memory,
+    # is_current_stage_in_memory,
     select_usd_variants,
 )
 from isaaclab.sim.utils.stage import get_current_stage
@@ -166,7 +166,7 @@ def spawn_ground_plane(
         # Apply physics material to ground plane
         collision_prim_path = prim_utils.get_prim_path(
             prim_utils.get_first_matching_child_prim(
-                prim_path, predicate=lambda x: prim_utils.get_prim_type_name(x) == "Plane"
+                prim_path, predicate=lambda x: x.IsA(UsdGeom.Plane)
             )
         )
         bind_physics_material(collision_prim_path, f"{prim_path}/physicsMaterial")
@@ -182,28 +182,25 @@ def spawn_ground_plane(
     # Change the color of the plane
     # Warning: This is specific to the default grid plane asset.
     if cfg.color is not None:
-        # avoiding this step if stage is in memory since the "ChangePropertyCommand" kit command
-        # is not supported in stage in memory
-        if is_current_stage_in_memory():
-            logger.warning(
-                "Ground plane color modification is not supported while the stage is in memory. Skipping operation."
-            )
-
-        else:
-            prop_path = f"{prim_path}/Looks/theGrid/Shader.inputs:diffuse_tint"
-
-            # change the color
-            omni.kit.commands.execute(
-                "ChangePropertyCommand",
-                prop_path=Sdf.Path(prop_path),
-                value=Gf.Vec3f(*cfg.color),
-                prev=None,
-                type_to_create_if_not_exist=Sdf.ValueTypeNames.Color3f,
-            )
+        # change the color using USD core API
+        stage = get_current_stage()
+        shader_prim = stage.GetPrimAtPath(f"{prim_path}/Looks/theGrid/Shader")
+        if shader_prim.IsValid():
+            diffuse_attr = shader_prim.GetAttribute("inputs:diffuse_tint")
+            if not diffuse_attr:
+                diffuse_attr = shader_prim.CreateAttribute(
+                    "inputs:diffuse_tint",
+                    Sdf.ValueTypeNames.Color3f
+                )
+            diffuse_attr.Set(Gf.Vec3f(*cfg.color))
+    
     # Remove the light from the ground plane
     # It isn't bright enough and messes up with the user's lighting settings
     stage = get_current_stage()
-    omni.kit.commands.execute("ToggleVisibilitySelectedPrims", selected_paths=[f"{prim_path}/SphereLight"], stage=stage)
+    light_prim = stage.GetPrimAtPath(f"{prim_path}/SphereLight")
+    if light_prim.IsValid():
+        imageable = UsdGeom.Imageable(light_prim)
+        imageable.MakeInvisible()
 
     prim = prim_utils.get_prim_at_path(prim_path)
     # Apply semantic tags

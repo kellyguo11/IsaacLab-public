@@ -7,16 +7,15 @@ from __future__ import annotations
 
 import json
 import math
-import numpy as np
 import torch
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
-import carb
 import warp as wp
-from isaacsim.core.prims import XFormPrim
 from pxr import UsdGeom
 
+from isaaclab.sim.prims import XFormPrim
+from isaaclab.app.settings_manager import get_settings_manager
 from isaaclab.utils.warp.kernels import reshape_tiled_image
 
 from ..sensor_base import SensorBase
@@ -83,6 +82,7 @@ class TiledCamera(Camera):
             RuntimeError: If Isaac Sim version < 4.2
             ValueError: If the provided data types are not supported by the camera.
         """
+
         super().__init__(cfg)
 
     def __del__(self):
@@ -139,8 +139,8 @@ class TiledCamera(Camera):
             RuntimeError: If the number of camera prims in the view does not match the number of environments.
             RuntimeError: If replicator was not found.
         """
-        carb_settings_iface = carb.settings.get_settings()
-        if not carb_settings_iface.get("/isaaclab/cameras_enabled"):
+        settings_manager = get_settings_manager()
+        if not settings_manager.get("/isaaclab/cameras_enabled"):
             raise RuntimeError(
                 "A camera was spawned without the --enable_cameras flag. Please use --enable_cameras to enable"
                 " rendering."

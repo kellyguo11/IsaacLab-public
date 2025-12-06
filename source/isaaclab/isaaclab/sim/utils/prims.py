@@ -14,26 +14,28 @@ import torch
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any
 
-import omni
-import omni.kit.commands
-import omni.usd
-import usdrt
-from omni.usd.commands import DeletePrimsCommand, MovePrimCommand
+# import omni
+# import omni.kit.commands
+# import omni.usd
+# import usdrt
+# from omni.usd.commands import DeletePrimsCommand, MovePrimCommand
 from pxr import Sdf, Usd, UsdGeom, UsdPhysics, UsdShade
 
 from isaaclab.utils.string import to_camel_case
 
-from .semantics import add_labels
+# from .semantics import add_labels
 from .stage import add_reference_to_stage, get_current_stage
+
+from isaaclab.sim.prims import XFormPrim
 
 if TYPE_CHECKING:
     from isaaclab.sim.spawners.spawner_cfg import SpawnerCfg
 
-# from Isaac Sim 4.2 onwards, pxr.Semantics is deprecated
-try:
-    import Semantics
-except ModuleNotFoundError:
-    from pxr import Semantics
+# # from Isaac Sim 4.2 onwards, pxr.Semantics is deprecated
+# try:
+#     import Semantics
+# except ModuleNotFoundError:
+#     from pxr import Semantics
 
 # import logger
 logger = logging.getLogger(__name__)
@@ -134,9 +136,6 @@ def create_prim(
         ... )
         Usd.Prim(</World/panda>)
     """
-    # Note: Imported here to prevent cyclic dependency in the module.
-    from isaacsim.core.prims import XFormPrim
-
     # create prim in stage
     prim = define_prim(prim_path=prim_path, prim_type=prim_type)
     if not prim:
@@ -152,24 +151,6 @@ def create_prim(
     if semantic_label is not None:
         add_labels(prim, labels=[semantic_label], instance_name=semantic_type)
     # apply the transformations
-    from isaacsim.core.api.simulation_context.simulation_context import SimulationContext
-
-    if SimulationContext.instance() is None:
-        # FIXME: remove this, we should never even use backend utils  especially not numpy ones
-        import isaacsim.core.utils.numpy as backend_utils
-
-        device = "cpu"
-    else:
-        backend_utils = SimulationContext.instance().backend_utils
-        device = SimulationContext.instance().device
-    if position is not None:
-        position = backend_utils.expand_dims(backend_utils.convert(position, device), 0)
-    if translation is not None:
-        translation = backend_utils.expand_dims(backend_utils.convert(translation, device), 0)
-    if orientation is not None:
-        orientation = backend_utils.expand_dims(backend_utils.convert(orientation, device), 0)
-    if scale is not None:
-        scale = backend_utils.expand_dims(backend_utils.convert(scale, device), 0)
     XFormPrim(prim_path, positions=position, translations=translation, orientations=orientation, scales=scale)
 
     return prim

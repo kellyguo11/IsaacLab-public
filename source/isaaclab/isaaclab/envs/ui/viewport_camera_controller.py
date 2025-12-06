@@ -12,8 +12,8 @@ import weakref
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
-import omni.kit.app
-import omni.timeline
+# import omni.kit.app
+# import omni.timeline
 
 from isaaclab.assets.articulation.articulation import Articulation
 
@@ -73,6 +73,8 @@ class ViewportCameraController:
         else:
             # set the camera origin to the center of the world
             self.update_view_to_world()
+
+        import omni.kit.app
 
         # subscribe to post update event so that camera view can be updated at each rendering step
         app_interface = omni.kit.app.get_app_interface()

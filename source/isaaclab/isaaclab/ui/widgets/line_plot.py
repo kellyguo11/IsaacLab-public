@@ -10,8 +10,7 @@ import numpy as np
 from contextlib import suppress
 from typing import TYPE_CHECKING
 
-import omni
-from isaacsim.core.api.simulation_context import SimulationContext
+from isaaclab.sim.simulation_context import SimulationContext
 
 with suppress(ImportError):
     # isaacsim.gui is not available when running in headless mode.
@@ -224,6 +223,8 @@ class LiveLinePlot(UIWidgetWrapper):
             grid: Whether to display grid lines. Defaults to True.
         """
 
+        import omni.ui
+
         # Reset lists which are populated in the build function
         self._plot_frames = []
 
@@ -392,6 +393,9 @@ class LiveLinePlot(UIWidgetWrapper):
         |+-----------------------------------------------------+|
         +-------------------------------------------------------+
         """
+
+        import omni.ui
+
         if not self._show_legend:
             return
 
@@ -443,6 +447,9 @@ class LiveLinePlot(UIWidgetWrapper):
         |||    -------------------------------------------    |||
         |||+-------------------------------------------------+|||
         """
+
+        import omni.ui
+
         with omni.ui.VStack():
             with omni.ui.HStack():
                 omni.ui.Label(
@@ -496,6 +503,9 @@ class LiveLinePlot(UIWidgetWrapper):
         |+-----------------------------------------------------+|
         +-------------------------------------------------------+
         """
+
+        import omni.ui
+
         with omni.ui.VStack():
             with omni.ui.HStack():
 
@@ -525,6 +535,8 @@ class LiveLinePlot(UIWidgetWrapper):
 
     def _create_ui_widget(self):
         """Create the full UI widget."""
+
+        import omni.ui
 
         def _build_widget():
             self._is_built = False

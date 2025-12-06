@@ -8,11 +8,12 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-import omni.kit.commands
+# import omni.kit.commands
 from pxr import Usd
 
 import isaaclab.sim.utils.prims as prim_utils
-from isaaclab.sim.utils import attach_stage_to_usd_context, clone, safe_set_attribute_on_usd_prim
+from isaaclab.sim.utils import clone, safe_set_attribute_on_usd_prim
+# from isaaclab.sim.utils import attach_stage_to_usd_context, clone, safe_set_attribute_on_usd_prim
 from isaaclab.utils.assets import NVIDIA_NUCLEUS_DIR
 from isaaclab.utils.string import to_camel_case
 
@@ -54,7 +55,9 @@ def spawn_preview_surface(prim_path: str, cfg: visual_materials_cfg.PreviewSurfa
     if not prim_utils.is_prim_path_valid(prim_path):
         # early attach stage to usd context if stage is in memory
         # since stage in memory is not supported by the "CreatePreviewSurfaceMaterialPrim" kit command
-        attach_stage_to_usd_context(attaching_early=True)
+        # attach_stage_to_usd_context(attaching_early=True)
+
+        import omni.kit.commands
 
         omni.kit.commands.execute("CreatePreviewSurfaceMaterialPrim", mtl_path=prim_path, select_new_prim=False)
     else:
@@ -104,7 +107,9 @@ def spawn_from_mdl_file(prim_path: str, cfg: visual_materials_cfg.MdlMaterialCfg
     if not prim_utils.is_prim_path_valid(prim_path):
         # early attach stage to usd context if stage is in memory
         # since stage in memory is not supported by the "CreateMdlMaterialPrim" kit command
-        attach_stage_to_usd_context(attaching_early=True)
+        # attach_stage_to_usd_context(attaching_early=True)
+
+        import omni.kit.commands
 
         # extract material name from path
         material_name = cfg.mdl_path.split("/")[-1].split(".")[0]

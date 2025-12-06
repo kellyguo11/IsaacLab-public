@@ -11,8 +11,7 @@ import weakref
 from dataclasses import MISSING
 from typing import TYPE_CHECKING
 
-import omni.kit.app
-from isaacsim.core.api.simulation_context import SimulationContext
+from isaaclab.sim.simulation_context import SimulationContext
 
 from isaaclab.managers import ManagerBase
 from isaaclab.utils import configclass
@@ -63,6 +62,8 @@ class ManagerLiveVisualizer(UiVisualizerBase):
             manager: The manager with terms to be plotted. The manager must have a :meth:`get_active_iterable_terms` method.
             cfg: The configuration file used to select desired manager terms to be plotted.
         """
+
+        import omni.ui
 
         self._manager = manager
         self.debug_vis = cfg.debug_vis
@@ -184,6 +185,9 @@ class ManagerLiveVisualizer(UiVisualizerBase):
         Args:
             debug_vis: Whether to enable or disable debug visualization.
         """
+
+        import omni.kit.app
+        import omni.ui
 
         if not hasattr(self, "_vis_frame"):
             raise RuntimeError("No frame set for debug visualization.")
