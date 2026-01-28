@@ -54,8 +54,8 @@ def register_task_to_hydra(
     cfg_dict = {"env": env_cfg_dict, "agent": agent_cfg_dict}
     # replace slices with strings because OmegaConf does not support slices
     cfg_dict = replace_slices_with_strings(cfg_dict)
-    # store the configuration to Hydra
-    ConfigStore.instance().store(name=task_name, node=cfg_dict)
+    # store the configuration to Hydra (use just env ID as config name, without module prefix)
+    ConfigStore.instance().store(name=task_name.split(":")[-1], node=cfg_dict)
     return env_cfg, agent_cfg
 
 
@@ -77,9 +77,10 @@ def hydra_task_config(task_name: str, agent_cfg_entry_point: str) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             # register the task to Hydra
-            env_cfg, agent_cfg = register_task_to_hydra(task_name.split(":")[-1], agent_cfg_entry_point)
+            env_cfg, agent_cfg = register_task_to_hydra(task_name, agent_cfg_entry_point)
 
             # define the new Hydra main function
+            # Note: Hydra config names use just the env ID (no module prefix) as colons aren't valid in config names
             @hydra.main(config_path=None, config_name=task_name.split(":")[-1], version_base="1.3")
             def hydra_main(hydra_env_cfg: DictConfig, env_cfg=env_cfg, agent_cfg=agent_cfg):
                 # convert to a native dictionary

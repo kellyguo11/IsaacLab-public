@@ -55,12 +55,12 @@ def load_cfg_from_registry(task_name: str, entry_point_key: str) -> dict | objec
         ValueError: If the entry point key is not available in the gym registry for the task.
     """
     # obtain the configuration entry point
-    cfg_entry_point = gym.spec(task_name.split(":")[-1]).kwargs.get(entry_point_key)
+    cfg_entry_point = gym.spec(task_name).kwargs.get(entry_point_key)
     # check if entry point exists
     if cfg_entry_point is None:
         # get existing agents and algorithms
         agents = collections.defaultdict(list)
-        for k in gym.spec(task_name.split(":")[-1]).kwargs:
+        for k in gym.spec(task_name).kwargs:
             if k.endswith("_cfg_entry_point") and k != "env_cfg_entry_point":
                 spec = (
                     k.replace("_cfg_entry_point", "")
@@ -138,7 +138,7 @@ def parse_env_cfg(
             environment configuration.
     """
     # load the default configuration
-    cfg = load_cfg_from_registry(task_name.split(":")[-1], "env_cfg_entry_point")
+    cfg = load_cfg_from_registry(task_name, "env_cfg_entry_point")
 
     # check that it is not a dict
     # we assume users always use a class for the configuration
