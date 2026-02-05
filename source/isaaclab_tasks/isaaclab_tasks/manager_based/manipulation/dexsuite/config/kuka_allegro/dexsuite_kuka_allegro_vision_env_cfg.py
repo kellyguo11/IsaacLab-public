@@ -48,6 +48,9 @@ class KukaAllegroSingleTiledCameraSceneCfg(kuka_allegro_dexsuite.KukaAllegroScen
         del self.width
         del self.height
 
+        self.robot.spawn.semantic_tags = [("class", "robot")]
+        self.object.spawn.semantic_tags = [("class", "object")]
+
 
 @configclass
 class KukaAllegroDuoTiledCameraSceneCfg(KukaAllegroSingleTiledCameraSceneCfg):
@@ -120,7 +123,19 @@ singe_camera_variants = {
     ),
     "64x64tiled_rgb": KukaAllegroSingleTiledCameraSceneCfg(**{**sa, "camera_type": "rgb", "width": 64, "height": 64}),
     "64x64tiled_albedo": KukaAllegroSingleTiledCameraSceneCfg(
-        **{**sa, "camera_type": "diffuse_albedo", "width": 64, "height": 64}
+        **{**sa, "camera_type": "albedo", "width": 64, "height": 64}
+    ),
+    "64x64tiled_sd_constant": KukaAllegroSingleTiledCameraSceneCfg(
+        **{**sa, "camera_type": "simple_shading_constant_diffuse", "width": 64, "height": 64}
+    ),
+    "64x64tiled_sd_diffuse": KukaAllegroSingleTiledCameraSceneCfg(
+        **{**sa, "camera_type": "simple_shading_diffuse_mdl", "width": 64, "height": 64}
+    ),
+    "64x64tiled_sd_full": KukaAllegroSingleTiledCameraSceneCfg(
+        **{**sa, "camera_type": "simple_shading_full_mdl", "width": 64, "height": 64}
+    ),
+    "64x64tiled_segmentation": KukaAllegroSingleTiledCameraSceneCfg(
+        **{**sa, "camera_type": "instance_segmentation_fast", "width": 64, "height": 64}
     ),
     "128x128tiled_depth": KukaAllegroSingleTiledCameraSceneCfg(
         **{**sa, "camera_type": "distance_to_image_plane", "width": 128, "height": 128}

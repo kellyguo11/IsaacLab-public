@@ -24,6 +24,8 @@ sys.path.insert(0, os.path.abspath("../source/isaaclab_assets"))
 sys.path.insert(0, os.path.abspath("../source/isaaclab_assets/isaaclab_assets"))
 sys.path.insert(0, os.path.abspath("../source/isaaclab_tasks"))
 sys.path.insert(0, os.path.abspath("../source/isaaclab_tasks/isaaclab_tasks"))
+sys.path.insert(0, os.path.abspath("../source/isaaclab_physx"))
+sys.path.insert(0, os.path.abspath("../source/isaaclab_physx/isaaclab_physx"))
 sys.path.insert(0, os.path.abspath("../source/isaaclab_rl"))
 sys.path.insert(0, os.path.abspath("../source/isaaclab_rl/isaaclab_rl"))
 sys.path.insert(0, os.path.abspath("../source/isaaclab_mimic"))
@@ -287,7 +289,7 @@ templates_path = [
 # Whitelist pattern for remotes
 smv_remote_whitelist = r"^.*$"
 # Whitelist pattern for branches (set to None to ignore all branches)
-smv_branch_whitelist = os.getenv("SMV_BRANCH_WHITELIST", r"^(main|devel|release/.*)$")
+smv_branch_whitelist = os.getenv("SMV_BRANCH_WHITELIST", r"^(main|develop|release/.*)$")
 # Whitelist pattern for tags (set to None to ignore all tags)
 smv_tag_whitelist = os.getenv("SMV_TAG_WHITELIST", r"^v[1-9]\d*\.\d+\.\d+$")
 html_sidebars = {

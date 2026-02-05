@@ -11,6 +11,7 @@ import torch
 
 from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import ManagerTermBase, SceneEntityCfg
+from isaaclab.sensors.camera.utils import save_images_to_file
 from isaaclab.utils.math import quat_apply, quat_apply_inverse, quat_inv, quat_mul, subtract_frame_transforms
 
 from .utils import sample_object_point_cloud
@@ -212,6 +213,10 @@ class vision_camera(ManagerTermBase):
     ) -> torch.Tensor:  # obtain the input image
         images = self.sensor.data.output[self.sensor_type]
         torch.nan_to_num_(images, nan=1e6)
+        # if self.sensor_type == "depth":
+        #     save_images_to_file(images, f"rtx_{self.sensor_type}_{images.shape[0]}.png")
+        # else:
+        #     save_images_to_file(images.float() / 255.0, f"rtx_{self.sensor_type}_{images.shape[0]}.png")
         if normalize:
             images = self.norm_fn(images)
             images = images.permute(0, 3, 1, 2).contiguous()

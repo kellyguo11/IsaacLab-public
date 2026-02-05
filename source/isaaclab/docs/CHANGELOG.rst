@@ -1,7 +1,7 @@
 Changelog
 ---------
 
-2.0.0 (2026-02-02)
+3.0.0 (2026-02-02)
 ~~~~~~~~~~~~~~~~~~
 
 Added
@@ -19,6 +19,151 @@ Changed
 * Updated dex-retargeting to 0.5.0 with numpy 2.0+ dependency.
 * Removed explicit URDF importer extension version dependency in :class:`~isaaclab.sim.converters.urdf_converter.UrdfConverter` and related code.
 
+
+2.1.2 (2026-01-30)
+~~~~~~~~~~~~~~~~~~~
+
+Added
+^^^^^
+
+* Added :mod:`isaaclab.test.benchmark` module providing a comprehensive benchmarking framework
+  for measuring performance of Isaac Lab components. Includes:
+
+  * :class:`BenchmarkConfig`: Configuration dataclass for benchmark execution parameters
+    (iterations, warmup steps, instances, device).
+  * :class:`BenchmarkResult`: Dataclass capturing timing statistics (mean, std in microseconds),
+    skip status, and dependency information.
+  * :class:`MethodBenchmark`: Definition class for methods to benchmark with multi-mode
+    input generators.
+  * Input generator helpers for creating standardized tensors and Warp masks:
+    ``make_tensor_env_ids``, ``make_tensor_joint_ids``, ``make_tensor_body_ids``,
+    ``make_warp_env_mask``, ``make_warp_joint_mask``, ``make_warp_body_mask``.
+  * :func:`benchmark_method`: Core function for benchmarking with warmup phases,
+    GPU synchronization, and graceful error handling.
+  * I/O utilities: :func:`get_hardware_info`, :func:`get_git_info`, :func:`print_hardware_info`,
+    :func:`print_results`, :func:`export_results_json`, :func:`export_results_csv`.
+
+
+2.1.1 (2026-02-03)
+~~~~~~~~~~~~~~~~~~~
+
+Added
+^^^^^
+
+* Added :mod:`isaaclab.test.mock_interfaces` module providing mock implementations for unit testing
+  without requiring Isaac Sim. Includes:
+
+  * Mock assets: :class:`MockArticulation`, :class:`MockRigidObject`, :class:`MockRigidObjectCollection`
+    with full state tracking and property management.
+  * Mock sensors: :class:`MockContactSensor`, :class:`MockImu`, :class:`MockFrameTransformer`
+    with configurable data outputs.
+  * Utility classes: :class:`MockArticulationBuilder`, :class:`MockSensorBuilder`,
+    :class:`MockWrenchComposer` for flexible mock construction.
+  * Factory functions for common robot morphologies (quadruped, humanoid).
+  * Patching utilities and decorators for easy test injection.
+
+
+2.1.0 (2026-02-02)
+~~~~~~~~~~~~~~~~~~~
+
+Added
+^^^^^
+
+* Added :class:`~isaaclab.sensors.contact_sensor.BaseContactSensor` and
+  :class:`~isaaclab.sensors.contact_sensor.BaseContactSensorData` abstract base classes that define
+  the interface for contact sensors. These classes provide a backend-agnostic API for contact sensing.
+* Added :class:`~isaaclab.sensors.imu.BaseImu` and :class:`~isaaclab.sensors.imu.BaseImuData` abstract
+  base classes that define the interface for IMU sensors. These classes provide a backend-agnostic
+  API for inertial measurement.
+* Added :class:`~isaaclab.sensors.frame_transformer.BaseFrameTransformer` and
+  :class:`~isaaclab.sensors.frame_transformer.BaseFrameTransformerData` abstract base classes that
+  define the interface for frame transformer sensors. These classes provide a backend-agnostic API
+  for coordinate frame transformations.
+
+Changed
+^^^^^^^
+
+* Refactored the sensor classes (:class:`~isaaclab.sensors.ContactSensor`,
+  :class:`~isaaclab.sensors.Imu`, :class:`~isaaclab.sensors.FrameTransformer`) to follow the
+  multi-backend architecture. The classes now act as factory wrappers that instantiate the
+  appropriate backend-specific implementation (PhysX by default).
+* Refactored the sensor data classes (:class:`~isaaclab.sensors.ContactSensorData`,
+  :class:`~isaaclab.sensors.ImuData`, :class:`~isaaclab.sensors.FrameTransformerData`) to use the
+  factory pattern for backend-specific instantiation.
+* Moved PhysX-specific sensor tests to the ``isaaclab_physx`` package:
+
+  * ``test_contact_sensor.py`` → ``isaaclab_physx/test/sensors/``
+  * ``test_imu.py`` → ``isaaclab_physx/test/sensors/``
+  * ``test_frame_transformer.py`` → ``isaaclab_physx/test/sensors/``
+
+
+2.0.0 (2026-01-30)
+~~~~~~~~~~~~~~~~~~
+
+Added
+^^^^^
+
+* Added :class:`~isaaclab.assets.BaseArticulation` and :class:`~isaaclab.assets.BaseArticulationData`
+  abstract base classes that define the interface for articulation assets. These classes provide
+  a backend-agnostic API for articulation operations.
+* Added :class:`~isaaclab.assets.BaseRigidObject` and :class:`~isaaclab.assets.BaseRigidObjectData`
+  abstract base classes that define the interface for rigid object assets. These classes provide
+  a backend-agnostic API for rigid object operations.
+* Added :class:`~isaaclab.assets.BaseRigidObjectCollection` and :class:`~isaaclab.assets.BaseRigidObjectCollectionData`
+  abstract base classes that define the interface for rigid object collection assets. These classes
+  provide a backend-agnostic API for managing collections of rigid objects.
+* Added :mod:`~isaaclab.utils.backend_utils` module with utilities for managing simulation backends.
+
+Changed
+^^^^^^^
+
+* Refactored the asset classes to follow a multi-backend architecture. The core :mod:`isaaclab.assets`
+  module now provides abstract base classes that define the interface, while backend-specific
+  implementations are provided in separate packages (e.g., ``isaaclab_physx``).
+* The concrete :class:`~isaaclab.assets.Articulation`, :class:`~isaaclab.assets.RigidObject`,
+  and :class:`~isaaclab.assets.RigidObjectCollection` classes in the ``isaaclab`` package
+  now inherit from their respective base classes, and using the backend-specific implementations provided
+  in the ``isaaclab_physx`` package, provide the default PhysX-based implementation.
+* Moved :class:`DeformableObject`, :class:`DeformableObjectCfg`, and :class:`DeformableObjectData`
+  to the ``isaaclab_physx`` package since deformable bodies are specific to PhysX simulation.
+* Moved :class:`SurfaceGripper` and :class:`SurfaceGripperCfg` to the ``isaaclab_physx`` package
+  since surface grippers rely on PhysX-specific contact APIs.
+
+Deprecated
+^^^^^^^^^^
+
+* Deprecated the ``root_physx_view`` property on :class:`~isaaclab.assets.Articulation`,
+  :class:`~isaaclab.assets.RigidObject`, and :class:`~isaaclab.assets.RigidObjectCollection`
+  in favor of the backend-agnostic ``root_view`` property.
+
+* Deprecated the ``object_*`` naming convention in :class:`~isaaclab.assets.RigidObjectCollection`
+  and :class:`~isaaclab.assets.RigidObjectCollectionData` in favor of ``body_*``:
+
+  **RigidObjectCollection methods:**
+
+  * ``write_object_state_to_sim()`` → use ``write_body_state_to_sim()``
+  * ``write_object_link_state_to_sim()`` → use ``write_body_link_state_to_sim()``
+  * ``write_object_pose_to_sim()`` → use ``write_body_pose_to_sim()``
+  * ``write_object_link_pose_to_sim()`` → use ``write_body_link_pose_to_sim()``
+  * ``write_object_com_pose_to_sim()`` → use ``write_body_com_pose_to_sim()``
+  * ``write_object_velocity_to_sim()`` → use ``write_body_com_velocity_to_sim()``
+  * ``write_object_com_velocity_to_sim()`` → use ``write_body_com_velocity_to_sim()``
+  * ``write_object_link_velocity_to_sim()`` → use ``write_body_link_velocity_to_sim()``
+  * ``find_objects()`` → use ``find_bodies()``
+
+  **RigidObjectCollectionData properties:**
+
+  * ``default_object_state`` → use ``default_body_state``
+  * ``object_names`` → use ``body_names``
+  * ``object_pose_w``, ``object_pos_w``, ``object_quat_w`` → use ``body_pose_w``, ``body_pos_w``, ``body_quat_w``
+  * ``object_vel_w``, ``object_lin_vel_w``, ``object_ang_vel_w`` → use ``body_vel_w``, ``body_lin_vel_w``, ``body_ang_vel_w``
+  * ``object_acc_w``, ``object_lin_acc_w``, ``object_ang_acc_w`` → use ``body_acc_w``, ``body_lin_acc_w``, ``body_ang_acc_w``
+  * And all other ``object_*`` properties (see :ref:`migrating-to-isaaclab-3-0` for complete list).
+
+Migration
+^^^^^^^^^
+
+* See :ref:`migrating-to-isaaclab-3-0` for detailed migration instructions.
 
 1.0.0 (2026-01-30)
 ~~~~~~~~~~~~~~~~~~~

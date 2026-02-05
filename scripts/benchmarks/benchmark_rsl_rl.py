@@ -229,13 +229,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         # prepare RL timing dict
         collection_fps = (
             1
-            / (np.array(log_data["Perf/collection time"]))
+            / (np.array(log_data["Perf/collection_time"]))
             * env.unwrapped.num_envs
             * agent_cfg.num_steps_per_env
             * world_size
         )
         rl_training_times = {
-            "Collection Time": (np.array(log_data["Perf/collection time"]) / 1000).tolist(),
+            "Collection Time": (np.array(log_data["Perf/collection_time"]) / 1000).tolist(),
             "Learning Time": (np.array(log_data["Perf/learning_time"]) / 1000).tolist(),
             "Collection FPS": collection_fps.tolist(),
             "Total FPS": log_data["Perf/total_fps"] * world_size,
