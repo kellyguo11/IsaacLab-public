@@ -48,8 +48,8 @@ class KukaAllegroSingleTiledCameraSceneCfg(kuka_allegro_dexsuite.KukaAllegroScen
         del self.width
         del self.height
 
-        self.robot.spawn.semantic_tags = [("class", "robot")]
-        self.object.spawn.semantic_tags = [("class", "object")]
+        # self.robot.spawn.semantic_tags = [("class", "robot")]
+        # self.object.spawn.semantic_tags = [("class", "object")]
 
 
 @configclass
