@@ -215,6 +215,13 @@ class RigidObject(BaseRigidObject):
         The root state comprises of the cartesian position, quaternion orientation in (x, y, z, w), and linear
         and angular velocity. All the quantities are in the simulation frame.
 
+        .. note::
+            This method expects partial data.
+
+        .. tip::
+            For maximum performance we recommend looking at the actual implementation of the method in the backend.
+            Some backends may provide optimized implementations for masks / indices.
+
         Args:
             root_state: Root state in simulation frame. Shape is (len(env_ids), 13).
             env_ids: Environment indices. If None, then all indices are used.
@@ -227,6 +234,13 @@ class RigidObject(BaseRigidObject):
 
         The root state comprises of the cartesian position, quaternion orientation in (x, y, z, w), and linear
         and angular velocity. All the quantities are in the simulation frame.
+
+        .. note::
+            This method expects full data.
+
+        .. tip::
+            For maximum performance we recommend looking at the actual implementation of the method in the backend.
+            Some backends may provide optimized implementations for masks / indices.
 
         Args:
             root_state: Root state in simulation frame. Shape is (num_instances, 13).
@@ -241,6 +255,13 @@ class RigidObject(BaseRigidObject):
         The root state comprises of the cartesian position, quaternion orientation in (x, y, z, w), and linear
         and angular velocity. All the quantities are in the simulation frame.
 
+        .. note::
+            This method expects partial data.
+
+        .. tip::
+            For maximum performance we recommend looking at the actual implementation of the method in the backend.
+            Some backends may provide optimized implementations for masks / indices.
+
         Args:
             root_state: Root state in simulation frame. Shape is (len(env_ids), 13).
             env_ids: Environment indices. If None, then all indices are used.
@@ -253,6 +274,13 @@ class RigidObject(BaseRigidObject):
 
         The root state comprises of the cartesian position, quaternion orientation in (x, y, z, w), and linear
         and angular velocity. All the quantities are in the simulation frame.
+
+        .. note::
+            This method expects full data.
+
+        .. tip::
+            For maximum performance we recommend looking at the actual implementation of the method in the backend.
+            Some backends may provide optimized implementations for masks / indices.
 
         Args:
             root_state: Root state in simulation frame. Shape is (num_instances, 13).
@@ -267,6 +295,13 @@ class RigidObject(BaseRigidObject):
         The root state comprises of the cartesian position, quaternion orientation in (x, y, z, w), and linear
         and angular velocity. All the quantities are in the simulation frame.
 
+        .. note::
+            This method expects partial data.
+
+        .. tip::
+            For maximum performance we recommend looking at the actual implementation of the method in the backend.
+            Some backends may provide optimized implementations for masks / indices.
+
         Args:
             root_state: Root state in simulation frame. Shape is (len(env_ids), 13).
             env_ids: Environment indices. If None, then all indices are used.
@@ -279,6 +314,13 @@ class RigidObject(BaseRigidObject):
 
         The root state comprises of the cartesian position, quaternion orientation in (x, y, z, w), and linear
         and angular velocity. All the quantities are in the simulation frame.
+
+        .. note::
+            This method expects full data.
+
+        .. tip::
+            For maximum performance we recommend looking at the actual implementation of the method in the backend.
+            Some backends may provide optimized implementations for masks / indices.
 
         Args:
             root_state: Root state in simulation frame. Shape is (num_instances, 13).
@@ -296,6 +338,13 @@ class RigidObject(BaseRigidObject):
 
         The root pose comprises of the cartesian position and quaternion orientation in (w, x, y, z).
 
+        .. note::
+            This method expects partial data.
+
+        .. tip::
+            For maximum performance we recommend looking at the actual implementation of the method in the backend.
+            Some backends may provide optimized implementations for masks / indices.
+
         Args:
             root_pose: Root poses in simulation frame. Shape is (len(env_ids), 7).
             env_ids: Environment indices. If None, then all indices are used.
@@ -308,6 +357,13 @@ class RigidObject(BaseRigidObject):
         env_mask: wp.array | None = None,
     ) -> None:
         """Set the root pose over selected environment mask into the simulation.
+
+        .. note::
+            This method expects full data.
+
+        .. tip::
+            For maximum performance we recommend looking at the actual implementation of the method in the backend.
+            Some backends may provide optimized implementations for masks / indices.
 
         Args:
             root_pose: Root poses in simulation frame. Shape is (num_instances, 7).
@@ -325,6 +381,13 @@ class RigidObject(BaseRigidObject):
         The velocity comprises linear velocity (x, y, z) and angular velocity (x, y, z) in that order.
         NOTE: This sets the velocity of the root's center of mass rather than the roots frame.
 
+        .. note::
+            This method expects partial data.
+
+        .. tip::
+            For maximum performance we recommend looking at the actual implementation of the method in the backend.
+            Some backends may provide optimized implementations for masks / indices.
+
         Args:
             root_velocity: Root center of mass velocities in simulation world frame. Shape is (len(env_ids), 6).
             env_ids: Environment indices. If None, then all indices are used.
@@ -337,6 +400,13 @@ class RigidObject(BaseRigidObject):
         env_mask: wp.array | None = None,
     ) -> None:
         """Set the root center of mass velocity over selected environment mask into the simulation.
+
+        .. note::
+            This method expects full data.
+
+        .. tip::
+            For maximum performance we recommend looking at the actual implementation of the method in the backend.
+            Some backends may provide optimized implementations for masks / indices.
 
         Args:
             root_velocity: Root center of mass velocities in simulation world frame. Shape is (num_instances, 6).
@@ -353,6 +423,13 @@ class RigidObject(BaseRigidObject):
         """Set the root link pose over selected environment indices into the simulation.
 
         The root pose comprises of the cartesian position and quaternion orientation in (w, x, y, z).
+
+        .. note::
+            This method expects partial data.
+
+        .. tip::
+            For maximum performance we recommend looking at the actual implementation of the method in the backend.
+            Some backends may provide optimized implementations for masks / indices.
 
         Args:
             root_pose: Root link poses in simulation frame. Shape is (len(env_ids), 7) or (num_instances, 7).
@@ -381,10 +458,10 @@ class RigidObject(BaseRigidObject):
         )
         # Update the timestamps
         self.data._root_link_pose_w.timestamp = self.data._sim_timestamp
-        self.data._root_link_state_w.timestamp = -1.0
-        self.data._root_state_w.timestamp = -1.0
         # Invalidate dependent timestamps
         self.data._root_com_pose_w.timestamp = -1.0
+        self.data._root_link_state_w.timestamp = -1.0
+        self.data._root_state_w.timestamp = -1.0
         self.data._root_com_state_w.timestamp = -1.0
         # set into simulation
         self.root_view.set_transforms(self.data._root_link_pose_w.data.view(wp.float32), indices=env_ids)
@@ -397,6 +474,13 @@ class RigidObject(BaseRigidObject):
         """Set the root link pose over selected environment mask into the simulation.
 
         The root pose comprises of the cartesian position and quaternion orientation in (w, x, y, z).
+
+        .. note::
+            This method expects full data.
+
+        .. tip::
+            For maximum performance we recommend looking at the actual implementation of the method in the backend.
+            Some backends may provide optimized implementations for masks / indices.
 
         Args:
             root_pose: Root poses in simulation frame. Shape is (num_instances, 7).
@@ -418,6 +502,13 @@ class RigidObject(BaseRigidObject):
 
         The root pose comprises of the cartesian position and quaternion orientation in (w, x, y, z).
         The orientation is the orientation of the principle axes of inertia.
+
+        .. note::
+            This method expects partial data or full data.
+
+        .. tip::
+            For maximum performance we recommend looking at the actual implementation of the method in the backend.
+            Some backends may provide optimized implementations for masks / indices.
 
         Args:
             root_pose: Root center of mass poses in simulation frame. Shape is (len(env_ids), 7) or (num_instances, 7).
@@ -450,6 +541,7 @@ class RigidObject(BaseRigidObject):
         # Update the timestamps
         self.data._root_com_pose_w.timestamp = self.data._sim_timestamp
         self.data._root_link_pose_w.timestamp = self.data._sim_timestamp
+        # Invalidate dependent timestamps
         self.data._root_com_state_w.timestamp = -1.0
         self.data._root_link_state_w.timestamp = -1.0
         self.data._root_state_w.timestamp = -1.0
@@ -465,6 +557,13 @@ class RigidObject(BaseRigidObject):
 
         The root pose comprises of the cartesian position and quaternion orientation in (w, x, y, z).
         The orientation is the orientation of the principle axes of inertia.
+
+        .. note::
+            This method expects full data.
+
+        .. tip::
+            For maximum performance we recommend looking at the actual implementation of the method in the backend.
+            Some backends may provide optimized implementations for masks / indices.
 
         Args:
             root_pose: Root center of mass poses in simulation frame. Shape is (num_instances, 7).
@@ -486,6 +585,13 @@ class RigidObject(BaseRigidObject):
 
         The velocity comprises linear velocity (x, y, z) and angular velocity (x, y, z) in that order.
         NOTE: This sets the velocity of the root's center of mass rather than the roots frame.
+
+        .. note::
+            This method expects partial data or full data.
+
+        .. tip::
+            For maximum performance we recommend looking at the actual implementation of the method in the backend.
+            Some backends may provide optimized implementations for masks / indices.
 
         Args:
             root_velocity: Root center of mass velocities in simulation world frame.
@@ -518,11 +624,11 @@ class RigidObject(BaseRigidObject):
         # Update the timestamps
         self.data._root_com_vel_w.timestamp = self.data._sim_timestamp
         self.data._body_com_acc_w.timestamp = self.data._sim_timestamp
-        self.data._root_com_state_w.timestamp = -1.0
-        self.data._root_state_w.timestamp = -1.0
         # Invalidate dependent timestamps
         self.data._root_link_vel_w.timestamp = -1.0
         self.data._root_link_state_w.timestamp = -1.0
+        self.data._root_com_state_w.timestamp = -1.0
+        self.data._root_state_w.timestamp = -1.0
         # set into simulation
         self.root_view.set_velocities(self.data._root_com_vel_w.data.view(wp.float32), indices=env_ids)
 
@@ -535,6 +641,13 @@ class RigidObject(BaseRigidObject):
 
         The velocity comprises linear velocity (x, y, z) and angular velocity (x, y, z) in that order.
         NOTE: This sets the velocity of the root's center of mass rather than the roots frame.
+
+        .. note::
+            This method expects full data.
+
+        .. tip::
+            For maximum performance we recommend looking at the actual implementation of the method in the backend.
+            Some backends may provide optimized implementations for masks / indices.
 
         Args:
             root_velocity: Root center of mass velocities in simulation world frame. Shape is (num_instances, 6).
@@ -556,6 +669,13 @@ class RigidObject(BaseRigidObject):
 
         The velocity comprises linear velocity (x, y, z) and angular velocity (x, y, z) in that order.
         NOTE: This sets the velocity of the root's frame rather than the roots center of mass.
+
+        .. note::
+            This method expects partial data or full data.
+
+        .. tip::
+            For maximum performance we recommend looking at the actual implementation of the method in the backend.
+            Some backends may provide optimized implementations for masks / indices.
 
         Args:
             root_velocity: Root frame velocities in simulation world frame.
@@ -593,10 +713,11 @@ class RigidObject(BaseRigidObject):
         # Update the timestamps
         self.data._root_link_vel_w.timestamp = self.data._sim_timestamp
         self.data._root_com_vel_w.timestamp = self.data._sim_timestamp
+        self.data._body_com_acc_w.timestamp = self.data._sim_timestamp
+        # Invalidate dependent timestamps
         self.data._root_link_state_w.timestamp = -1.0
         self.data._root_state_w.timestamp = -1.0
         self.data._root_com_state_w.timestamp = -1.0
-        self.data._body_com_acc_w.timestamp = self.data._sim_timestamp
         # set into simulation
         self.root_view.set_velocities(self.data._root_com_vel_w.data.view(wp.float32), indices=env_ids)
 
@@ -609,6 +730,13 @@ class RigidObject(BaseRigidObject):
 
         The velocity comprises linear velocity (x, y, z) and angular velocity (x, y, z) in that order.
         NOTE: This sets the velocity of the root's frame rather than the roots center of mass.
+
+        .. note::
+            This method expects full data.
+
+        .. tip::
+            For maximum performance we recommend looking at the actual implementation of the method in the backend.
+            Some backends may provide optimized implementations for masks / indices.
 
         Args:
             root_velocity: Root frame velocities in simulation world frame. Shape is (num_instances, 6).
