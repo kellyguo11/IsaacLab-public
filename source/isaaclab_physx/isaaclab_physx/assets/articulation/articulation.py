@@ -193,7 +193,6 @@ class Articulation(BaseArticulation):
     Operations.
     """
 
-    # FIXME: Support env_mask.
     def reset(self, env_ids: Sequence[int] | None = None, env_mask: wp.array | None = None) -> None:
         """Reset the articulation.
 
@@ -211,8 +210,8 @@ class Articulation(BaseArticulation):
         for actuator in self.actuators.values():
             actuator.reset(env_ids)
         # reset external wrenches.
-        self._instantaneous_wrench_composer.reset(env_ids)
-        self._permanent_wrench_composer.reset(env_ids)
+        self._instantaneous_wrench_composer.reset(env_ids, env_mask)
+        self._permanent_wrench_composer.reset(env_ids, env_mask)
 
     def write_data_to_sim(self):
         """Write external wrenches and joint commands to the simulation.
@@ -361,150 +360,6 @@ class Articulation(BaseArticulation):
     Operations - State Writers.
     """
 
-    def write_root_state_to_sim_index(
-        self, root_state: torch.Tensor | wp.array,
-        env_ids: Sequence[int] | torch.Tensor | wp.array | None = None,
-    ) -> None:
-        """Set the root state over selected environment indices into the simulation.
-
-        The root state comprises of the cartesian position, quaternion orientation in (x, y, z, w), and linear
-        and angular velocity. All the quantities are in the simulation frame.
-
-        .. note::
-            This method expect partial data.
-
-        .. tip::
-            For maximum performance we recommend using the index method. This is because in PhysX, the tensor API
-            is only supporting indexing, hence masks need to be converted to indices.
-
-        Args:
-            root_state: Root state in simulation frame. Shape is (len(env_ids), 13).
-            env_ids: Environment indices. If None, then all indices are used.
-        """
-        if isinstance(root_state, torch.Tensor):
-            self.write_root_link_pose_to_sim_index(root_state[:, :7], env_ids=env_ids)
-            self.write_root_com_velocity_to_sim_index(root_state[:, 7:], env_ids=env_ids)
-        else:
-            self.write_root_link_pose_to_sim_index(root_state.view(wp.float32)[:, :7], env_ids=env_ids)
-            self.write_root_com_velocity_to_sim_index(root_state.view(wp.float32)[:, 7:], env_ids=env_ids)
-
-    def write_root_state_to_sim_mask(
-        self, root_state: torch.Tensor | wp.array,
-        env_mask: wp.array | None = None,
-    ) -> None:
-        """Set the root state over selected environment mask into the simulation.
-
-        The root state comprises of the cartesian position, quaternion orientation in (x, y, z, w), and linear
-        and angular velocity. All the quantities are in the simulation frame.
-
-        .. note::
-            This method expect full data.
-
-        .. tip::
-            For maximum performance we recommend using the index method. This is because in PhysX, the tensor API
-            is only supporting indexing, hence masks need to be converted to indices.
-
-        Args:
-            root_state: Root state in simulation frame. Shape is (num_instances, 13).
-            env_mask: Environment mask. If None, then all indices are used.
-        """
-        self.write_root_link_pose_to_sim_mask(root_state[:, :7], env_mask=env_mask)
-        self.write_root_com_velocity_to_sim_mask(root_state[:, 7:], env_mask=env_mask)
-
-    def write_root_com_state_to_sim_index(
-        self, root_state: torch.Tensor | wp.array,
-        env_ids: Sequence[int] | torch.Tensor | wp.array | None = None,
-    ) -> None:
-        """Set the root center of mass state over selected environment indices into the simulation.
-
-        The root state comprises of the cartesian position, quaternion orientation in (x, y, z, w), and linear
-        and angular velocity. All the quantities are in the simulation frame.
-
-        .. note::
-            This method expect partial data.
-
-        .. tip::
-            For maximum performance we recommend using the index method. This is because in PhysX, the tensor API
-            is only supporting indexing, hence masks need to be converted to indices.
-
-        Args:
-            root_state: Root state in simulation frame. Shape is (len(env_ids), 13).
-            env_ids: Environment indices. If None, then all indices are used.
-        """
-        self.write_root_com_pose_to_sim_index(root_state[:, :7], env_ids=env_ids)
-        self.write_root_com_velocity_to_sim_index(root_state[:, 7:], env_ids=env_ids)
-
-    def write_root_com_state_to_sim_mask(
-        self,
-        root_state: torch.Tensor | wp.array,
-        env_mask: wp.array | None = None,
-    ) -> None:
-        """Set the root center of mass state over selected environment mask into the simulation.
-
-        The root state comprises of the cartesian position, quaternion orientation in (x, y, z, w), and linear
-        and angular velocity. All the quantities are in the simulation frame.
-
-        .. note::
-            This method expect full data.
-
-        .. tip::
-            For maximum performance we recommend using the index method. This is because in PhysX, the tensor API
-            is only supporting indexing, hence masks need to be converted to indices.
-
-        Args:
-            root_state: Root state in simulation frame. Shape is (num_instances, 13).
-            env_mask: Environment mask. If None, then all indices are used.
-        """
-        self.write_root_com_pose_to_sim_mask(root_state[:, :7], env_mask=env_mask)
-        self.write_root_com_velocity_to_sim_mask(root_state[:, 7:], env_mask=env_mask)
-
-    def write_root_link_state_to_sim_index(
-        self, root_state: torch.Tensor | wp.array,
-        env_ids: Sequence[int] | torch.Tensor | wp.array | None = None,
-    ) -> None:
-        """Set the root link state over selected environment indices into the simulation.
-
-        The root state comprises of the cartesian position, quaternion orientation in (x, y, z, w), and linear
-        and angular velocity. All the quantities are in the simulation frame.
-
-        .. note::
-            This method expect partial data.
-
-        .. tip::
-            For maximum performance we recommend using the index method. This is because in PhysX, the tensor API
-            is only supporting indexing, hence masks need to be converted to indices.
-
-        Args:
-            root_state: Root state in simulation frame. Shape is (len(env_ids), 13).
-            env_ids: Environment indices. If None, then all indices are used.
-        """
-        self.write_root_link_pose_to_sim_index(root_state[:, :7], env_ids=env_ids)
-        self.write_root_link_velocity_to_sim_index(root_state[:, 7:], env_ids=env_ids)
-
-    def write_root_link_state_to_sim_mask(
-        self,
-        root_state: torch.Tensor | wp.array,
-        env_mask: wp.array | None = None,
-    ) -> None:
-        """Set the root link state over selected environment mask into the simulation.
-
-        The root state comprises of the cartesian position, quaternion orientation in (x, y, z, w), and linear
-        and angular velocity. All the quantities are in the simulation frame.
-
-        .. note::
-            This method expect full data.
-
-        .. tip::
-            For maximum performance we recommend using the index method. This is because in PhysX, the tensor API
-            is only supporting indexing, hence masks need to be converted to indices.
-
-        Args:
-            root_state: Root state in simulation frame. Shape is (num_instances, 13).
-            env_mask: Environment mask. If None, then all indices are used.
-        """
-        self.write_root_link_pose_to_sim_mask(root_state[:, :7], env_mask=env_mask)
-        self.write_root_link_velocity_to_sim_mask(root_state[:, 7:], env_mask=env_mask)
-
     def write_root_pose_to_sim_index(
         self,
         root_pose: torch.Tensor | wp.array,
@@ -572,13 +427,7 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve all indices
-        if isinstance(env_ids, list):
-            # Convert list to tensor explicitly for warp kernels
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, torch.Tensor):
-            env_ids = wp.from_torch(env_ids, dtype=wp.int32)
+        env_ids = self._resolve_env_ids(env_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             set_root_link_pose_to_sim,
@@ -658,13 +507,7 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve all indices
-        if isinstance(env_ids, list):
-            # Convert list to tensor explicitly for warp kernels
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, torch.Tensor):
-            env_ids = wp.from_torch(env_ids, dtype=wp.int32)
+        env_ids = self._resolve_env_ids(env_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         # Note: we are doing a single launch for faster performance. Prior versions would call
         # write_root_link_pose_to_sim after this.
@@ -798,13 +641,7 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve all indices
-        if isinstance(env_ids, list):
-            # Convert list to tensor explicitly for warp kernels
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, torch.Tensor):
-            env_ids = wp.from_torch(env_ids, dtype=wp.int32)
+        env_ids = self._resolve_env_ids(env_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             set_root_com_velocity_to_sim,
@@ -883,13 +720,7 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve all indices
-        if isinstance(env_ids, list):
-            # Convert list to tensor explicitly for warp kernels
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        if isinstance(env_ids, torch.Tensor):
-            env_ids = wp.from_torch(env_ids, dtype=wp.int32)
+        env_ids = self._resolve_env_ids(env_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         # Note: we are doing a single launch for faster performance. Prior versions would do multiple launches.
         wp.launch(
@@ -951,28 +782,20 @@ class Articulation(BaseArticulation):
         self.write_root_link_velocity_to_sim_index(root_velocity, env_ids=env_ids, full_data=True)
 
 
-    def write_joint_state_to_sim_index(
+    def write_joint_state_to_sim(
         self,
         position: torch.Tensor | wp.array,
         velocity: torch.Tensor | wp.array,
         joint_ids: Sequence[int] | torch.Tensor | wp.array | None = None,
         env_ids: Sequence[int] | torch.Tensor | wp.array | None = None,
     ):
-        """Write joint positions and velocities over selected environment indices into the simulation.
-
-        .. note::
-            This method expect partial data.
-
-        .. tip::
-            For maximum performance we recommend using the index method. This is because in PhysX, the tensor API
-            is only supporting indexing, hence masks need to be converted to indices.
-
-        Args:
-            position: Joint positions. Shape is (len(env_ids), len(joint_ids)) or (num_instances, num_joints).
-            velocity: Joint velocities. Shape is (len(env_ids), len(joint_ids)) or (num_instances, num_joints).
-            joint_ids: The joint indices to set the targets for. Defaults to None (all joints).
-            env_ids: The environment indices to set the targets for. Defaults to None (all environments).
-        """
+        """Deprecated, same as :meth:`write_joint_position_to_sim_index` and :meth:`write_joint_velocity_to_sim_index`."""
+        warnings.warn(
+            "The function 'write_joint_state_to_sim' will be deprecated in a future release. Please"
+            " use 'write_joint_position_to_sim_index' and 'write_joint_velocity_to_sim_index' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         # set into simulation
         self.write_joint_position_to_sim_index(position, joint_ids=joint_ids, env_ids=env_ids)
         self.write_joint_velocity_to_sim_index(velocity, joint_ids=joint_ids, env_ids=env_ids)
@@ -1026,18 +849,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve all indices
-        if isinstance(env_ids, list):
-            # Convert list to tensor explicitly for warp kernels
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, torch.Tensor):
-            env_ids = wp.from_torch(env_ids, dtype=wp.int32)
-        if isinstance(joint_ids, list):
-            # Convert list to tensor explicitly for warp kernels
-            joint_ids = wp.array(joint_ids, dtype=wp.int32, device=self.device)
-        if (joint_ids is None) or (joint_ids == slice(None)):
-            joint_ids = self._ALL_JOINT_INDICES
+        env_ids = self._resolve_env_ids(env_ids)
+        joint_ids = self._resolve_joint_ids(joint_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             write_2d_data_to_buffer_with_indices,
@@ -1121,18 +934,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve all indices
-        if isinstance(env_ids, list):
-            # Convert list to tensor explicitly for warp kernels
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, torch.Tensor):
-            env_ids = wp.from_torch(env_ids, dtype=wp.int32)
-        if isinstance(joint_ids, list):
-            # Convert list to tensor explicitly for warp kernels
-            joint_ids = wp.array(joint_ids, dtype=wp.int32, device=self.device)
-        if (joint_ids is None) or (joint_ids == slice(None)):
-            joint_ids = self._ALL_JOINT_INDICES
+        env_ids = self._resolve_env_ids(env_ids)
+        joint_ids = self._resolve_joint_ids(joint_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             write_joint_vel_data,
@@ -1214,16 +1017,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve all indices
-        if isinstance(env_ids, list):
-            # Convert list to tensor explicitly for warp kernels
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        if isinstance(joint_ids, list):
-            # Convert list to tensor explicitly for warp kernels
-            joint_ids = wp.array(joint_ids, dtype=wp.int32, device=self.device)
-        if (joint_ids is None) or (joint_ids == slice(None)):
-            joint_ids = self._ALL_JOINT_INDICES
+        env_ids = self._resolve_env_ids(env_ids)
+        joint_ids = self._resolve_joint_ids(joint_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         if isinstance(stiffness, float):
             wp.launch(
@@ -1313,14 +1108,8 @@ class Articulation(BaseArticulation):
         """
         # Note This function isn't setting the values for actuator models. (#128)
         # resolve all indices
-        if isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        if isinstance(joint_ids, list):
-            joint_ids = wp.array(joint_ids, dtype=wp.int32, device=self.device)
-        if (joint_ids is None) or (joint_ids == slice(None)):
-            joint_ids = self._ALL_JOINT_INDICES
+        env_ids = self._resolve_env_ids(env_ids)
+        joint_ids = self._resolve_joint_ids(joint_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         if isinstance(damping, float):
             wp.launch(
@@ -1413,14 +1202,8 @@ class Articulation(BaseArticulation):
         """
         # Note This function isn't setting the values for actuator models. (#128)
         # resolve all indices
-        if isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        if isinstance(joint_ids, list):
-            joint_ids = wp.array(joint_ids, dtype=wp.int32, device=self.device)
-        if (joint_ids is None) or (joint_ids == slice(None)):
-            joint_ids = self._ALL_JOINT_INDICES
+        env_ids = self._resolve_env_ids(env_ids)
+        joint_ids = self._resolve_joint_ids(joint_ids)
 
         clamped_defaults = False
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
@@ -1522,14 +1305,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve all indices
-        if isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        if isinstance(joint_ids, list):
-            joint_ids = wp.array(joint_ids, dtype=wp.int32, device=self.device)
-        if (joint_ids is None) or (joint_ids == slice(None)):
-            joint_ids = self._ALL_JOINT_INDICES
+        env_ids = self._resolve_env_ids(env_ids)
+        joint_ids = self._resolve_joint_ids(joint_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         if isinstance(limits, float):
             wp.launch(
@@ -1626,14 +1403,8 @@ class Articulation(BaseArticulation):
         """
         # Note This function isn't setting the values for actuator models. (#128)
         # resolve all indices
-        if isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        if isinstance(joint_ids, list):
-            joint_ids = wp.array(joint_ids, dtype=wp.int32, device=self.device)
-        if (joint_ids is None) or (joint_ids == slice(None)):
-            joint_ids = self._ALL_JOINT_INDICES
+        env_ids = self._resolve_env_ids(env_ids)
+        joint_ids = self._resolve_joint_ids(joint_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         if isinstance(limits, float):
             wp.launch(
@@ -1728,14 +1499,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve all indices
-        if isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        if isinstance(joint_ids, list):
-            joint_ids = wp.array(joint_ids, dtype=wp.int32, device=self.device)
-        if (joint_ids is None) or (joint_ids == slice(None)):
-            joint_ids = self._ALL_JOINT_INDICES
+        env_ids = self._resolve_env_ids(env_ids)
+        joint_ids = self._resolve_joint_ids(joint_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         if isinstance(armature, float):
             wp.launch(
@@ -1845,14 +1610,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve all indices
-        if isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        if isinstance(joint_ids, list):
-            joint_ids = wp.array(joint_ids, dtype=wp.int32, device=self.device)
-        if (joint_ids is None) or (joint_ids == slice(None)):
-            joint_ids = self._ALL_JOINT_INDICES
+        env_ids = self._resolve_env_ids(env_ids)
+        joint_ids = self._resolve_joint_ids(joint_ids)
         # Get the friction properties from the simulation.
         friction_props = wp.clone(self.root_view.get_dof_friction_properties(), device=self.device)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
@@ -1960,18 +1719,9 @@ class Articulation(BaseArticulation):
             env_ids: Environment indices. If None, then all indices are used.
             full_data: Whether to expect full data. Defaults to False.
         """
-        if get_isaac_sim_version().major < 5:
-            logger.warning("Setting joint dynamic friction coefficients are not supported in Isaac Sim < 5.0")
-            return
         # resolve all indices
-        if isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        if isinstance(joint_ids, list):
-            joint_ids = wp.array(joint_ids, dtype=wp.int32, device=self.device)
-        if (joint_ids is None) or (joint_ids == slice(None)):
-            joint_ids = self._ALL_JOINT_INDICES
+        env_ids = self._resolve_env_ids(env_ids)
+        joint_ids = self._resolve_joint_ids(joint_ids)
         # Get the friction properties from the simulation.
         friction_props = wp.clone(self.root_view.get_dof_friction_properties(), device=self.device)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
@@ -2055,14 +1805,8 @@ class Articulation(BaseArticulation):
             logger.warning("Setting joint viscous friction coefficients are not supported in Isaac Sim < 5.0")
             return
         # resolve all indices
-        if isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        if isinstance(joint_ids, list):
-            joint_ids = wp.array(joint_ids, dtype=wp.int32, device=self.device)
-        if (joint_ids is None) or (joint_ids == slice(None)):
-            joint_ids = self._ALL_JOINT_INDICES
+        env_ids = self._resolve_env_ids(env_ids)
+        joint_ids = self._resolve_joint_ids(joint_ids)
         # Get the friction properties from the simulation.
         friction_props = wp.clone(self.root_view.get_dof_friction_properties(), device=self.device)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
@@ -2147,14 +1891,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve all indices
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if body_ids is None:
-            body_ids = self._ALL_BODY_INDICES
-        elif isinstance(body_ids, list):
-            body_ids = wp.array(body_ids, dtype=wp.int32, device=self.device)
+        env_ids = self._resolve_env_ids(env_ids)
+        body_ids = self._resolve_body_ids(body_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             write_2d_data_to_buffer_with_indices,
@@ -2231,14 +1969,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve all indices
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if body_ids is None:
-            body_ids = self._ALL_BODY_INDICES
-        elif isinstance(body_ids, list):
-            body_ids = wp.array(body_ids, dtype=wp.int32, device=self.device)
+        env_ids = self._resolve_env_ids(env_ids)
+        body_ids = self._resolve_body_ids(body_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             write_body_com_pose_to_buffer,
@@ -2314,14 +2046,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve all indices
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if body_ids is None:
-            body_ids = self._ALL_BODY_INDICES
-        elif isinstance(body_ids, list):
-            body_ids = wp.array(body_ids, dtype=wp.int32, device=self.device)
+        env_ids = self._resolve_env_ids(env_ids)
+        body_ids = self._resolve_body_ids(body_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             write_body_inertia_to_buffer,
@@ -2400,14 +2126,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve all indices
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (joint_ids is None) or (joint_ids == slice(None)):
-            joint_ids = self._ALL_JOINT_INDICES
-        elif isinstance(joint_ids, list):
-            joint_ids = wp.array(joint_ids, dtype=wp.int32, device=self.device)
+        env_ids = self._resolve_env_ids(env_ids)
+        joint_ids = self._resolve_joint_ids(joint_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             write_2d_data_to_buffer_with_indices,
@@ -2481,14 +2201,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve all indices
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (joint_ids is None) or (joint_ids == slice(None)):
-            joint_ids = self._ALL_JOINT_INDICES
-        elif isinstance(joint_ids, list):
-            joint_ids = wp.array(joint_ids, dtype=wp.int32, device=self.device)
+        env_ids = self._resolve_env_ids(env_ids)
+        joint_ids = self._resolve_joint_ids(joint_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             write_2d_data_to_buffer_with_indices,
@@ -2562,14 +2276,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve all indices
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (joint_ids is None) or (joint_ids == slice(None)):
-            joint_ids = self._ALL_JOINT_INDICES
-        elif isinstance(joint_ids, list):
-            joint_ids = wp.array(joint_ids, dtype=wp.int32, device=self.device)
+        env_ids = self._resolve_env_ids(env_ids)
+        joint_ids = self._resolve_joint_ids(joint_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             write_2d_data_to_buffer_with_indices,
@@ -2648,14 +2356,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve indices
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = slice(None)
-        elif isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (fixed_tendon_ids is None) or (fixed_tendon_ids == slice(None)):
-            fixed_tendon_ids = self._ALL_FIXED_TENDON_INDICES
-        elif isinstance(fixed_tendon_ids, list):
-            fixed_tendon_ids = wp.array(fixed_tendon_ids, dtype=wp.int32, device=self.device)
+        env_ids = self._resolve_env_ids(env_ids)
+        fixed_tendon_ids = self._resolve_fixed_tendon_ids(fixed_tendon_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             write_2d_data_to_buffer_with_indices,
@@ -2733,14 +2435,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve indices
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (fixed_tendon_ids is None) or (fixed_tendon_ids == slice(None)):
-            fixed_tendon_ids = self._ALL_FIXED_TENDON_INDICES
-        elif isinstance(fixed_tendon_ids, list):
-            fixed_tendon_ids = wp.array(fixed_tendon_ids, dtype=wp.int32, device=self.device)
+        env_ids = self._resolve_env_ids(env_ids)
+        fixed_tendon_ids = self._resolve_fixed_tendon_ids(fixed_tendon_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             write_2d_data_to_buffer_with_indices,
@@ -2819,14 +2515,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve indices
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (fixed_tendon_ids is None) or (fixed_tendon_ids == slice(None)):
-            fixed_tendon_ids = self._ALL_FIXED_TENDON_INDICES
-        elif isinstance(fixed_tendon_ids, list):
-            fixed_tendon_ids = wp.array(fixed_tendon_ids, dtype=wp.int32, device=self.device)
+        env_ids = self._resolve_env_ids(env_ids)
+        fixed_tendon_ids = self._resolve_fixed_tendon_ids(fixed_tendon_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             write_2d_data_to_buffer_with_indices,
@@ -2905,14 +2595,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve indices
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (fixed_tendon_ids is None) or (fixed_tendon_ids == slice(None)):
-            fixed_tendon_ids = self._ALL_FIXED_TENDON_INDICES
-        elif isinstance(fixed_tendon_ids, list):
-            fixed_tendon_ids = wp.array(fixed_tendon_ids, dtype=wp.int32, device=self.device)   
+        env_ids = self._resolve_env_ids(env_ids)
+        fixed_tendon_ids = self._resolve_fixed_tendon_ids(fixed_tendon_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             write_2d_data_to_buffer_with_indices,
@@ -2991,14 +2675,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve indices
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (fixed_tendon_ids is None) or (fixed_tendon_ids == slice(None)):
-            fixed_tendon_ids = self._ALL_FIXED_TENDON_INDICES
-        elif isinstance(fixed_tendon_ids, list):
-            fixed_tendon_ids = wp.array(fixed_tendon_ids, dtype=wp.int32, device=self.device)
+        env_ids = self._resolve_env_ids(env_ids)
+        fixed_tendon_ids = self._resolve_fixed_tendon_ids(fixed_tendon_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             write_2d_data_to_buffer_with_indices,
@@ -3077,14 +2755,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve indices
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (fixed_tendon_ids is None) or (fixed_tendon_ids == slice(None)):
-            fixed_tendon_ids = self._ALL_FIXED_TENDON_INDICES
-        elif isinstance(fixed_tendon_ids, list):
-            fixed_tendon_ids = wp.array(fixed_tendon_ids, dtype=wp.int32, device=self.device)
+        env_ids = self._resolve_env_ids(env_ids)
+        fixed_tendon_ids = self._resolve_fixed_tendon_ids(fixed_tendon_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             write_2d_data_to_buffer_with_indices,
@@ -3151,10 +2823,7 @@ class Articulation(BaseArticulation):
             env_ids: Environment indices. If None, then all indices are used.
         """
         # resolve indices
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
+        env_ids = self._resolve_env_ids(env_ids)
         # Write fixed tendon properties to the simulation.
         self.root_view.set_fixed_tendon_properties(
             self.data.fixed_tendon_stiffness,
@@ -3213,14 +2882,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve indices
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (spatial_tendon_ids is None) or (spatial_tendon_ids == slice(None)):
-            spatial_tendon_ids = self._ALL_SPATIAL_TENDON_INDICES
-        elif isinstance(spatial_tendon_ids, list):
-            spatial_tendon_ids = wp.array(spatial_tendon_ids, dtype=wp.int32, device=self.device)
+        env_ids = self._resolve_env_ids(env_ids)
+        spatial_tendon_ids = self._resolve_spatial_tendon_ids(spatial_tendon_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             write_2d_data_to_buffer_with_indices,
@@ -3299,14 +2962,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve indices
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (spatial_tendon_ids is None) or (spatial_tendon_ids == slice(None)):
-            spatial_tendon_ids = self._ALL_SPATIAL_TENDON_INDICES
-        elif isinstance(spatial_tendon_ids, list):
-            spatial_tendon_ids = wp.array(spatial_tendon_ids, dtype=wp.int32, device=self.device)
+        env_ids = self._resolve_env_ids(env_ids)
+        spatial_tendon_ids = self._resolve_spatial_tendon_ids(spatial_tendon_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             write_2d_data_to_buffer_with_indices,
@@ -3385,14 +3042,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve indices
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (spatial_tendon_ids is None) or (spatial_tendon_ids == slice(None)):
-            spatial_tendon_ids = self._ALL_SPATIAL_TENDON_INDICES
-        elif isinstance(spatial_tendon_ids, list):
-            spatial_tendon_ids = wp.array(spatial_tendon_ids, dtype=wp.int32, device=self.device)
+        env_ids = self._resolve_env_ids(env_ids)
+        spatial_tendon_ids = self._resolve_spatial_tendon_ids(spatial_tendon_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             write_2d_data_to_buffer_with_indices,
@@ -3471,14 +3122,8 @@ class Articulation(BaseArticulation):
             full_data: Whether to expect full data. Defaults to False.
         """
         # resolve indices
-        if (env_ids is None) or (env_ids == slice(None)):
-            env_ids = self._ALL_INDICES
-        elif isinstance(env_ids, list):
-            env_ids = wp.array(env_ids, dtype=wp.int32, device=self.device)
-        if (spatial_tendon_ids is None) or (spatial_tendon_ids == slice(None)):
-            spatial_tendon_ids = self._ALL_SPATIAL_TENDON_INDICES
-        elif isinstance(spatial_tendon_ids, list):
-            spatial_tendon_ids = wp.array(spatial_tendon_ids, dtype=wp.int32, device=self.device)
+        env_ids = self._resolve_env_ids(env_ids)
+        spatial_tendon_ids = self._resolve_spatial_tendon_ids(spatial_tendon_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
             write_2d_data_to_buffer_with_indices,
@@ -4209,6 +3854,90 @@ class Articulation(BaseArticulation):
             logger.info(
                 f"Simulation parameters for spatial tendons in {self.cfg.prim_path}:\n" + tendon_table.get_string()
             )
+    
+    def _resolve_env_ids(self, env_ids: Sequence[int] | torch.Tensor | wp.array | None) -> wp.array:
+        """Resolve environment indices to a warp array.
+
+        .. note::
+            We need to convert torch tensors to warp arrays since the TensorAPI views only support warp arrays.
+        
+        Args:
+            env_ids: Environment indices. If None, then all indices are used.
+        
+        Returns:
+            A warp array of environment indices.
+        """
+        if isinstance(env_ids, list):
+            return wp.array(env_ids, dtype=wp.int32, device=self.device)
+        if (env_ids is None) or (env_ids == slice(None)):
+            return self._ALL_INDICES
+        if isinstance(env_ids, torch.Tensor):
+            return wp.from_torch(env_ids, dtype=wp.int32)
+        return env_ids
+
+    def _resolve_joint_ids(self, joint_ids: Sequence[int] | torch.Tensor | wp.array | None) -> wp.array | torch.Tensor:
+        """Resolve joint indices to a warp array or tensor.
+
+        .. note::
+            We do not need to convert torch tensors to warp arrays since they never get passed to the TensorAPI views.
+        
+        Args:
+            joint_ids: Joint indices. If None, then all indices are used.
+        
+        Returns:
+            A warp array of joint indices or a tensor of joint indices.
+        """
+        if isinstance(joint_ids, list):
+            return wp.array(joint_ids, dtype=wp.int32, device=self.device)
+        if (joint_ids is None) or (joint_ids == slice(None)):
+            return self._ALL_JOINT_INDICES
+        return joint_ids
+
+    def _resolve_body_ids(self, body_ids: Sequence[int] | torch.Tensor | wp.array | None) -> wp.array | torch.Tensor:
+        """Resolve body indices to a warp array or tensor.
+        
+        Args:
+            body_ids: Body indices. If None, then all indices are used.
+        
+        Returns:
+            A warp array of body indices or a tensor of body indices.
+        """
+        if isinstance(body_ids, list):
+            return wp.array(body_ids, dtype=wp.int32, device=self.device)
+        if (body_ids is None) or (body_ids == slice(None)):
+            return self._ALL_BODY_INDICES
+        return body_ids
+
+    def _resolve_fixed_tendon_ids(self, tendon_ids: Sequence[int] | torch.Tensor | wp.array | None) -> wp.array | torch.Tensor:
+        """Resolve tendon indices to a warp array or tensor.
+        
+        Args:
+            tendon_ids: Tendon indices. If None, then all indices are used.
+        
+        Returns:
+            A warp array of tendon indices or a tensor of tendon indices.
+        """
+        if isinstance(tendon_ids, list):
+            return wp.array(tendon_ids, dtype=wp.int32, device=self.device)
+        if (tendon_ids is None) or (tendon_ids == slice(None)):
+            return self._ALL_FIXED_TENDON_INDICES
+        return tendon_ids
+
+    
+    def _resolve_spatial_tendon_ids(self, spatial_tendon_ids: Sequence[int] | torch.Tensor | wp.array | None) -> wp.array | torch.Tensor:
+        """Resolve spatial tendon indices to a warp array or tensor.
+        
+        Args:
+            spatial_tendon_ids: Spatial tendon indices. If None, then all indices are used.
+        
+        Returns:
+            A warp array of spatial tendon indices or a tensor of spatial tendon indices.
+        """
+        if isinstance(spatial_tendon_ids, list):
+            return wp.array(spatial_tendon_ids, dtype=wp.int32, device=self.device)
+        if (spatial_tendon_ids is None) or (spatial_tendon_ids == slice(None)):
+            return self._ALL_SPATIAL_TENDON_INDICES
+        return spatial_tendon_ids
 
     """
     Deprecated methods.
@@ -4273,3 +4002,45 @@ class Articulation(BaseArticulation):
             stacklevel=2,
         )
         self.write_joint_dynamic_friction_coefficient_to_sim_index(joint_dynamic_friction_coeff, joint_ids=joint_ids, env_ids=env_ids, full_data=full_data)
+
+    def write_root_state_to_sim(
+        self, root_state: torch.Tensor | wp.array,
+        env_ids: Sequence[int] | torch.Tensor | wp.array | None = None,
+    ) -> None:
+        """Deprecated, same as :meth:`write_root_link_pose_to_sim_index` and :meth:`write_root_com_velocity_to_sim_index`."""
+        warnings.warn(
+            "The function 'write_root_state_to_sim' will be deprecated in a future release. Please"
+            " use 'write_root_link_pose_to_sim_index' and 'write_root_com_velocity_to_sim_index' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.write_root_link_pose_to_sim_index(root_state[:, :7], env_ids=env_ids)
+        self.write_root_com_velocity_to_sim_index(root_state[:, 7:], env_ids=env_ids)
+
+    def write_root_com_state_to_sim(
+        self, root_state: torch.Tensor | wp.array,
+        env_ids: Sequence[int] | torch.Tensor | wp.array | None = None,
+    ) -> None:
+        """Deprecated, same as :meth:`write_root_com_pose_to_sim_index` and :meth:`write_root_com_velocity_to_sim_index`."""
+        warnings.warn(
+            "The function 'write_root_com_state_to_sim' will be deprecated in a future release. Please"
+            " use 'write_root_com_pose_to_sim_index' and 'write_root_com_velocity_to_sim_index' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.write_root_com_pose_to_sim_index(root_state[:, :7], env_ids=env_ids)
+        self.write_root_com_velocity_to_sim_index(root_state[:, 7:], env_ids=env_ids)
+
+    def write_root_link_state_to_sim(
+        self, root_state: torch.Tensor | wp.array,
+        env_ids: Sequence[int] | torch.Tensor | wp.array | None = None,
+    ) -> None:
+        """Deprecated, same as :meth:`write_root_link_pose_to_sim_index` and :meth:`write_root_link_velocity_to_sim_index`."""
+        warnings.warn(
+            "The function 'write_root_link_state_to_sim' will be deprecated in a future release. Please"
+            " use 'write_root_link_pose_to_sim_index' and 'write_root_link_velocity_to_sim_index' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.write_root_link_pose_to_sim_index(root_state[:, :7], env_ids=env_ids)
+        self.write_root_link_velocity_to_sim_index(root_state[:, 7:], env_ids=env_ids)
