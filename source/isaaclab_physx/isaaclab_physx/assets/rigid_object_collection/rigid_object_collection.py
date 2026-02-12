@@ -376,10 +376,12 @@ class RigidObjectCollection(BaseRigidObjectCollection):
                 body_poses,
                 env_ids,
                 body_ids,
+                full_data,
+            ],
+            outputs=[
                 self.data._body_link_pose_w.data,
                 None, #self.data._body_link_state_w.data,
                 None, #self.data._body_state_w.data,
-                full_data,
             ],
             device=self.device,
         )
@@ -442,12 +444,14 @@ class RigidObjectCollection(BaseRigidObjectCollection):
                 self.data.body_com_pose_b,
                 env_ids,
                 body_ids,
+                full_data,
+            ],
+            outputs=[
                 self.data._body_com_pose_w.data,
                 self.data._body_link_pose_w.data,
                 None, #self.data._body_com_state_w.data,
                 None, #self.data._body_link_state_w.data,
                 None, #self.data._body_state_w.data,
-                full_data,
             ],
             device=self.device,
         )
@@ -509,11 +513,13 @@ class RigidObjectCollection(BaseRigidObjectCollection):
                 body_velocities,
                 env_ids,
                 body_ids,
+                full_data,
+            ],
+            outputs=[
                 self.data._body_com_vel_w.data,
                 self.data._body_com_acc_w.data,
                 None, #self.data._body_state_w.data,
                 None, #self.data._body_com_state_w.data,
-                full_data,
             ],
             device=self.device,
         )
@@ -580,13 +586,15 @@ class RigidObjectCollection(BaseRigidObjectCollection):
                 self.data.body_link_pose_w,
                 env_ids,
                 body_ids,
+                full_data,
+            ],
+            outputs=[
                 self.data._body_link_vel_w.data,
                 self.data._body_com_vel_w.data,
                 self.data._body_com_acc_w.data,
                 None, #self.data._body_link_state_w.data,
                 None, #self.data._body_state_w.data,
                 None, #self.data._body_com_state_w.data,
-                full_data,
             ],
             device=self.device,
         )
@@ -660,10 +668,12 @@ class RigidObjectCollection(BaseRigidObjectCollection):
             dim=(env_ids.shape[0], body_ids.shape[0]),
             inputs=[
                 masses,
-                self.data._body_mass,
                 env_ids,
                 body_ids,
                 full_data,
+            ],
+            outputs=[
+                self.data._body_mass,
             ],
             device=self.device,
         )
@@ -737,10 +747,12 @@ class RigidObjectCollection(BaseRigidObjectCollection):
             dim=(env_ids.shape[0], body_ids.shape[0]),
             inputs=[
                 coms,
-                self.data._body_com_pose_b.data,
                 env_ids,
                 body_ids,
                 full_data,
+            ],
+            outputs=[
+                self.data._body_com_pose_b.data,
             ],
             device=self.device,
         )
@@ -816,10 +828,12 @@ class RigidObjectCollection(BaseRigidObjectCollection):
             dim=(env_ids.shape[0], body_ids.shape[0]),
             inputs=[
                 inertias,
-                self.data._body_inertia,
                 env_ids,
                 body_ids,
                 full_data,
+            ],
+            outputs=[
+                self.data._body_inertia,
             ],
             device=self.device,
         )
@@ -1141,7 +1155,8 @@ class RigidObjectCollection(BaseRigidObjectCollection):
         wp.launch(
             resolve_view_ids,
             dim=(num_query_envs, body_ids.shape[0]),
-            inputs=[env_ids, body_ids, view_ids, num_query_envs, self.num_instances],
+            inputs=[env_ids, body_ids, num_query_envs, self.num_instances],
+            outputs=[view_ids],
             device=device,
         )
         return view_ids
