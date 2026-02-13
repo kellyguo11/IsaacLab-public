@@ -83,6 +83,7 @@ simulation_app = app_launcher.app
 import gymnasium as gym
 
 import isaaclab_tasks  # noqa: F401
+from isaaclab.sensors import save_images_to_file
 from isaaclab.sim import SimulationContext
 from isaaclab.utils.seed import configure_seed
 from isaaclab_tasks.utils import parse_env_cfg
@@ -96,99 +97,26 @@ def tensor_to_numpy(tensor: torch.Tensor) -> np.ndarray:
 def save_images(images: torch.Tensor, output_dir: str, run_id: int, step: int, env_id: int = 0):
     """Save camera images to disk in a grid format showing all environments.
     
+    Uses Isaac Lab's save_images_to_file utility which applies global normalization
+    (not per-image normalization) to preserve relative differences.
+    
     Args:
-        images: Tensor of shape (num_envs, H, W, C) containing the images
+        images: Tensor of shape (num_envs, H, W, C) containing the images (in range [0, 255])
         output_dir: Directory to save images
         run_id: Run identifier (1 or 2)
         step: Step number
         env_id: Environment ID to save individually (deprecated, kept for compatibility)
     """
-    import cv2
-    import math
-    
     os.makedirs(output_dir, exist_ok=True)
     
-    num_envs = images.shape[0]
-    img_height = images.shape[1]
-    img_width = images.shape[2]
-    num_channels = images.shape[3] if len(images.shape) == 4 else 1
+    # Convert to float and normalize to [0, 1] for save_images_to_file
+    # Use global min/max to preserve relative differences across all environments
+    images_float = images.float()
+    images_normalized = images_float / 255.0
     
-    # Calculate grid dimensions (roughly square)
-    grid_cols = int(math.ceil(math.sqrt(num_envs)))
-    grid_rows = int(math.ceil(num_envs / grid_cols))
-    
-    # Convert all images to numpy
-    all_images = tensor_to_numpy(images)
-    
-    # Process each image for visualization
-    processed_images = []
-    for i in range(num_envs):
-        img = all_images[i]
-        
-        # Handle different image types
-        if num_channels == 3:  # RGB
-            # Denormalize if needed (images might be normalized)
-            if img.min() < 0 or img.max() <= 1.0:
-                # Convert from [0, 1] or [-mean, 1-mean] to [0, 255]
-                img = ((img - img.min()) / (img.max() - img.min() + 1e-8) * 255.0).astype(np.uint8)
-            else:
-                img = img.astype(np.uint8)
-            # Convert RGB to BGR for OpenCV
-            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        elif num_channels == 1:  # Depth or single channel
-            if len(img.shape) == 3 and img.shape[-1] == 1:
-                img = img.squeeze(-1)
-            # Normalize depth for visualization
-            if img.max() > 1.0:
-                img = ((img - img.min()) / (img.max() - img.min() + 1e-8) * 255.0).astype(np.uint8)
-            else:
-                img = (img * 255.0).astype(np.uint8)
-            # Convert to BGR for consistent handling
-            img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-        else:
-            img = img.astype(np.uint8)
-            if len(img.shape) == 2:
-                img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-        
-        processed_images.append(img)
-    
-    # Create grid image
-    grid_img_height = grid_rows * img_height
-    grid_img_width = grid_cols * img_width
-    grid_image = np.zeros((grid_img_height, grid_img_width, 3), dtype=np.uint8)
-    
-    # Place each image in the grid
-    for idx, img in enumerate(processed_images):
-        row = idx // grid_cols
-        col = idx % grid_cols
-        y_start = row * img_height
-        y_end = y_start + img_height
-        x_start = col * img_width
-        x_end = x_start + img_width
-        grid_image[y_start:y_end, x_start:x_end] = img
-    
-    # Add environment labels on the grid
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 0.3
-    font_thickness = 1
-    text_color = (0, 255, 0)  # Green
-    
-    for idx in range(num_envs):
-        row = idx // grid_cols
-        col = idx % grid_cols
-        x_start = col * img_width + 2
-        y_start = row * img_height + 12
-        cv2.putText(grid_image, f"Env {idx}", (x_start, y_start), font, font_scale, text_color, font_thickness)
-    
-    # Save grid image
+    # Save grid image using Isaac Lab's utility
     filename = os.path.join(output_dir, f"run{run_id}_step{step:03d}_grid.png")
-    cv2.imwrite(filename, grid_image)
-    
-    # Also save the first environment individually for detailed comparison
-    if num_envs > 0:
-        single_img = processed_images[0]
-        filename_single = os.path.join(output_dir, f"run{run_id}_step{step:03d}_env0.png")
-        cv2.imwrite(filename_single, single_img)
+    save_images_to_file(images_normalized, filename)
     
 
 def get_physics_state(env) -> dict:
@@ -336,20 +264,26 @@ def run_trial(task_name: str, num_envs: int, num_steps: int, seed: int, output_d
     
     # Run for specified number of steps
     for step in range(num_steps):
-        # Get observation (camera image)
+        # Get raw camera data directly from the sensor (before normalization)
+        # This ensures we save the actual RGB values, not the normalized observations
+        camera_sensor = env.unwrapped.scene.sensors["tiled_camera"]
+        data_type = env.unwrapped.cfg.tiled_camera.data_types[0]
+        raw_camera_data = camera_sensor.data.output[data_type].clone()
+        
+        # Save raw image (grid of all environments)
+        save_images(raw_camera_data, output_dir, run_id, step)
+        
+        # Get observation (camera image) - this is the normalized version for comparison
         if isinstance(obs, dict):
             # Extract policy observation (typically contains the camera image)
             camera_obs = obs["policy"]
         else:
             camera_obs = obs
         
-        # Save image (grid of all environments + individual env 0)
-        save_images(camera_obs, output_dir, run_id, step)
-        
         # Get physics state
         physics_state = get_physics_state(env)
         
-        # Store observation and state
+        # Store observation and state (using normalized observation for consistency)
         observations_list.append(camera_obs.clone())
         states_list.append(physics_state)
         
@@ -510,9 +444,8 @@ def main():
     print(f"\nImages saved to: {output_dir}")
     print("  - run1_stepXXX_grid.png: Grid view of all environments from first run")
     print("  - run2_stepXXX_grid.png: Grid view of all environments from second run")
-    print("  - run1_stepXXX_env0.png: Environment 0 from first run (for detailed comparison)")
-    print("  - run2_stepXXX_env0.png: Environment 0 from second run (for detailed comparison)")
-    print("\nYou can visually compare the grid images to see differences across all environments.")
+    print("\nImages use Isaac Lab's save_images_to_file utility (no per-image normalization).")
+    print("You can visually compare the grid images to see differences across all environments.")
     print("="*80)
     
     # Save summary to file
