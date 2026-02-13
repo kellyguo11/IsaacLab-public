@@ -94,25 +94,43 @@ def tensor_to_numpy(tensor: torch.Tensor) -> np.ndarray:
     return tensor.detach().cpu().numpy()
 
 
-def save_images(images: torch.Tensor, output_dir: str, run_id: int, step: int, env_id: int = 0):
+def save_images(images: torch.Tensor, output_dir: str, run_id: int, step: int, data_type: str = "rgb"):
     """Save camera images to disk in a grid format showing all environments.
     
     Uses Isaac Lab's save_images_to_file utility which applies global normalization
     (not per-image normalization) to preserve relative differences.
     
     Args:
-        images: Tensor of shape (num_envs, H, W, C) containing the images (in range [0, 255])
+        images: Tensor of shape (num_envs, H, W, C) containing the images
         output_dir: Directory to save images
         run_id: Run identifier (1 or 2)
         step: Step number
-        env_id: Environment ID to save individually (deprecated, kept for compatibility)
+        data_type: Type of image data ("rgb", "depth", etc.)
     """
     os.makedirs(output_dir, exist_ok=True)
     
-    # Convert to float and normalize to [0, 1] for save_images_to_file
-    # Use global min/max to preserve relative differences across all environments
-    images_float = images.float()
-    images_normalized = images_float / 255.0
+    # Handle different image types
+    if data_type == "rgb" or data_type == "albedo" or "shading" in data_type:
+        # RGB/Albedo images are in range [0, 255], normalize to [0, 1]
+        images_float = images.float()
+        images_normalized = images_float / 255.0
+    elif data_type == "depth" or "distance" in data_type:
+        # Depth images: handle infinity values and normalize
+        images_float = images.float()
+        # Replace infinity with zero for visualization
+        images_float[images_float == float("inf")] = 0.0
+        # Normalize to [0, 1] using global min/max across all environments
+        img_min = images_float.min()
+        img_max = images_float.max()
+        if img_max > img_min:
+            images_normalized = (images_float - img_min) / (img_max - img_min)
+        else:
+            images_normalized = images_float
+    else:
+        # Default: assume already in proper range
+        images_normalized = images.float()
+        if images_normalized.max() > 1.0:
+            images_normalized = images_normalized / 255.0
     
     # Save grid image using Isaac Lab's utility
     filename = os.path.join(output_dir, f"run{run_id}_step{step:03d}_grid.png")
@@ -271,7 +289,7 @@ def run_trial(task_name: str, num_envs: int, num_steps: int, seed: int, output_d
         raw_camera_data = camera_sensor.data.output[data_type].clone()
         
         # Save raw image (grid of all environments)
-        save_images(raw_camera_data, output_dir, run_id, step)
+        save_images(raw_camera_data, output_dir, run_id, step, data_type=data_type)
         
         # Get observation (camera image) - this is the normalized version for comparison
         if isinstance(obs, dict):
