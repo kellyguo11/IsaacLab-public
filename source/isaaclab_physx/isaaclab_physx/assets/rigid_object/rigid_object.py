@@ -6,11 +6,11 @@
 from __future__ import annotations
 
 import logging
-import numpy as np
 import warnings
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
+import numpy as np
 import torch
 import warp as wp
 
@@ -328,8 +328,8 @@ class RigidObject(BaseRigidObject):
             ],
             outputs=[
                 self.data._root_link_pose_w.data,
-                None, #self.data._root_link_state_w.data,
-                None, #self.data._root_state_w.data,
+                None,  # self.data._root_link_state_w.data,
+                None,  # self.data._root_state_w.data,
             ],
             device=self.device,
         )
@@ -406,9 +406,9 @@ class RigidObject(BaseRigidObject):
             outputs=[
                 self.data._root_com_pose_w.data,
                 self.data._root_link_pose_w.data,
-                None, #self.data._root_com_state_w.data,
-                None, #self.data._root_link_state_w.data,
-                None, #self.data._root_state_w.data,
+                None,  # self.data._root_com_state_w.data,
+                None,  # self.data._root_link_state_w.data,
+                None,  # self.data._root_state_w.data,
             ],
             device=self.device,
         )
@@ -487,8 +487,8 @@ class RigidObject(BaseRigidObject):
             outputs=[
                 self.data._root_com_vel_w.data,
                 self.data._body_com_acc_w.data,
-                None, #self.data._root_state_w.data,
-                None, #self.data._root_com_state_w.data,
+                None,  # self.data._root_state_w.data,
+                None,  # self.data._root_com_state_w.data,
             ],
             device=self.device,
         )
@@ -572,9 +572,9 @@ class RigidObject(BaseRigidObject):
                 self.data._root_link_vel_w.data,
                 self.data._root_com_vel_w.data,
                 self.data._body_com_acc_w.data,
-                None, #self.data._root_link_state_w.data,
-                None, #self.data._root_state_w.data,
-                None, #self.data._root_com_state_w.data,
+                None,  # self.data._root_link_state_w.data,
+                None,  # self.data._root_state_w.data,
+                None,  # self.data._root_com_state_w.data,
             ],
             device=self.device,
         )
@@ -615,7 +615,6 @@ class RigidObject(BaseRigidObject):
         else:
             env_ids = self._ALL_INDICES
         self.write_root_link_velocity_to_sim_index(root_velocity, env_ids=env_ids, full_data=True)
-
 
     """
     Operations - Setters.
@@ -807,12 +806,11 @@ class RigidObject(BaseRigidObject):
         body_ids = self._resolve_body_ids(body_ids)
         # Warp kernels can ingest torch tensors directly, so we don't need to convert to warp arrays here.
         wp.launch(
-            write_body_inertia_to_buffer,
+            write_single_body_inertia_to_buffer,
             dim=(env_ids.shape[0], body_ids.shape[0]),
             inputs=[
                 inertias,
                 env_ids,
-                body_ids,
                 full_data,
             ],
             outputs=[
@@ -962,10 +960,10 @@ class RigidObject(BaseRigidObject):
 
         .. note::
             We need to convert torch tensors to warp arrays since the TensorAPI views only support warp arrays.
-        
+
         Args:
             env_ids: Environment indices. If None, then all indices are used.
-        
+
         Returns:
             A warp array of environment indices or a tensor of environment indices.
         """
@@ -979,13 +977,13 @@ class RigidObject(BaseRigidObject):
 
     def _resolve_body_ids(self, body_ids: Sequence[int] | torch.Tensor | wp.array | None) -> wp.array | torch.Tensor:
         """Resolve body indices to a warp array or tensor.
-        
+
         .. note::
             We do not need to convert torch tensors to warp arrays since they never get passed to the TensorAPI views.
-        
+
         Args:
             body_ids: Body indices. If None, then all indices are used.
-        
+
         Returns:
             A warp array of body indices or a tensor of body indices.
         """
@@ -1016,7 +1014,9 @@ class RigidObject(BaseRigidObject):
         )
         return self.root_view
 
-    def write_root_state_to_sim(self, root_state: torch.Tensor | wp.array, env_ids: Sequence[int] | torch.Tensor | wp.array | None = None):
+    def write_root_state_to_sim(
+        self, root_state: torch.Tensor | wp.array, env_ids: Sequence[int] | torch.Tensor | wp.array | None = None
+    ):
         """Deprecated, same as :meth:`write_root_link_pose_to_sim_index` and :meth:`write_root_com_velocity_to_sim_index`."""
         warnings.warn(
             "The function 'write_root_state_to_sim' will be deprecated in a future release. Please"
@@ -1027,7 +1027,9 @@ class RigidObject(BaseRigidObject):
         self.write_root_link_pose_to_sim_index(root_state[:, :7], env_ids=env_ids)
         self.write_root_com_velocity_to_sim_index(root_state[:, 7:], env_ids=env_ids)
 
-    def write_root_com_state_to_sim(self, root_state: torch.Tensor | wp.array, env_ids: Sequence[int] | torch.Tensor | wp.array | None = None):
+    def write_root_com_state_to_sim(
+        self, root_state: torch.Tensor | wp.array, env_ids: Sequence[int] | torch.Tensor | wp.array | None = None
+    ):
         """Deprecated, same as :meth:`write_root_com_pose_to_sim_index` and :meth:`write_root_com_velocity_to_sim_index`."""
         warnings.warn(
             "The function 'write_root_com_state_to_sim' will be deprecated in a future release. Please"
@@ -1038,7 +1040,9 @@ class RigidObject(BaseRigidObject):
         self.write_root_com_pose_to_sim_index(root_state[:, :7], env_ids=env_ids)
         self.write_root_com_velocity_to_sim_index(root_state[:, 7:], env_ids=env_ids)
 
-    def write_root_link_state_to_sim(self, root_state: torch.Tensor | wp.array, env_ids: Sequence[int] | torch.Tensor | wp.array | None = None):
+    def write_root_link_state_to_sim(
+        self, root_state: torch.Tensor | wp.array, env_ids: Sequence[int] | torch.Tensor | wp.array | None = None
+    ):
         """Deprecated, same as :meth:`write_root_link_pose_to_sim_index` and :meth:`write_root_link_velocity_to_sim_index`."""
         warnings.warn(
             "The function 'write_root_link_state_to_sim' will be deprecated in a future release. Please"
@@ -1048,4 +1052,3 @@ class RigidObject(BaseRigidObject):
         )
         self.write_root_link_pose_to_sim_index(root_state[:, :7], env_ids=env_ids)
         self.write_root_link_velocity_to_sim_index(root_state[:, 7:], env_ids=env_ids)
-

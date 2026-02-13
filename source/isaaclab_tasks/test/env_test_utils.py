@@ -126,6 +126,10 @@ def _run_environments(
     ]:
         return
 
+    # these environments are using SingleArticulation class, which need to be updated
+    if "RmpFlow" in task_name or "Isaac-Stack-Cube-Galbot-Left-Arm-Gripper-Visuomotor" in task_name:
+        return
+
     # skip these environments as they cannot be run with 32 environments within reasonable VRAM
     if "Visuomotor" in task_name and num_envs == 32:
         return
@@ -221,47 +225,48 @@ def _check_random_actions(
     # disable control on stop
     env.unwrapped.sim._app_control_on_stop_handle = None  # type: ignore
 
-    # override action space if set to inf for `Isaac-Lift-Teddy-Bear-Franka-IK-Abs-v0`
-    if task_name == "Isaac-Lift-Teddy-Bear-Franka-IK-Abs-v0":
-        for i in range(env.unwrapped.single_action_space.shape[0]):
-            if env.unwrapped.single_action_space.low[i] == float("-inf"):
-                env.unwrapped.single_action_space.low[i] = -1.0
-            if env.unwrapped.single_action_space.high[i] == float("inf"):
-                env.unwrapped.single_action_space.low[i] = 1.0
+    try:
+        # override action space if set to inf for `Isaac-Lift-Teddy-Bear-Franka-IK-Abs-v0`
+        if task_name == "Isaac-Lift-Teddy-Bear-Franka-IK-Abs-v0":
+            for i in range(env.unwrapped.single_action_space.shape[0]):
+                if env.unwrapped.single_action_space.low[i] == float("-inf"):
+                    env.unwrapped.single_action_space.low[i] = -1.0
+                if env.unwrapped.single_action_space.high[i] == float("inf"):
+                    env.unwrapped.single_action_space.low[i] = 1.0
 
-    # reset environment
-    obs, _ = env.reset()
+        # reset environment
+        obs, _ = env.reset()
 
-    # check signal
-    assert _check_valid_tensor(obs)
+        # check signal
+        assert _check_valid_tensor(obs)
 
-    # simulate environment for num_steps
-    with torch.inference_mode():
-        for _ in range(num_steps):
-            # sample actions according to the defined space
-            if multi_agent:
-                actions = {
-                    agent: sample_space(
-                        env.unwrapped.action_spaces[agent], device=env.unwrapped.device, batch_size=num_envs
-                    )
-                    for agent in env.unwrapped.possible_agents
-                }
-            else:
-                actions = sample_space(
-                    env.unwrapped.single_action_space, device=env.unwrapped.device, batch_size=num_envs
-                )
-            # apply actions
-            transition = env.step(actions)
-            # check signals
-            for data in transition[:-1]:  # exclude info
+        # simulate environment for num_steps
+        with torch.inference_mode():
+            for _ in range(num_steps):
+                # sample actions according to the defined space
                 if multi_agent:
-                    for agent, agent_data in data.items():
-                        assert _check_valid_tensor(agent_data), f"Invalid data ('{agent}'): {agent_data}"
+                    actions = {
+                        agent: sample_space(
+                            env.unwrapped.action_spaces[agent], device=env.unwrapped.device, batch_size=num_envs
+                        )
+                        for agent in env.unwrapped.possible_agents
+                    }
                 else:
-                    assert _check_valid_tensor(data), f"Invalid data: {data}"
-
-    # close environment
-    env.close()
+                    actions = sample_space(
+                        env.unwrapped.single_action_space, device=env.unwrapped.device, batch_size=num_envs
+                    )
+                # apply actions
+                transition = env.step(actions)
+                # check signals
+                for data in transition[:-1]:  # exclude info
+                    if multi_agent:
+                        for agent, agent_data in data.items():
+                            assert _check_valid_tensor(agent_data), f"Invalid data ('{agent}'): {agent_data}"
+                    else:
+                        assert _check_valid_tensor(data), f"Invalid data: {data}"
+    finally:
+        # close environment - ensure cleanup even if test fails
+        env.close()
 
 
 def _check_valid_tensor(data: torch.Tensor | dict) -> bool:

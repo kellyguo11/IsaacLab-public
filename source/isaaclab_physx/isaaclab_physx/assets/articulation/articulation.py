@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import logging
 import warnings
-import numpy as np
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
+import numpy as np
 import torch
 import warp as wp
 from prettytable import PrettyTable
@@ -21,7 +21,6 @@ from prettytable import PrettyTable
 from isaacsim.core.simulation_manager import SimulationManager
 from pxr import PhysxSchema, UsdPhysics
 
-import isaaclab.utils.math as math_utils
 from isaaclab.actuators import ActuatorBase, ActuatorBaseCfg, ImplicitActuator
 from isaaclab.assets.articulation.base_articulation import BaseArticulation
 from isaaclab.sim.utils.queries import find_first_matching_prim, get_all_matching_child_prims
@@ -32,7 +31,6 @@ from isaaclab.utils.wrench_composer import WrenchComposer
 
 from .articulation_data import ArticulationData
 from .kernels import *
-
 
 if TYPE_CHECKING:
     import omni.physics.tensors.impl.api as physx
@@ -439,8 +437,8 @@ class Articulation(BaseArticulation):
             ],
             outputs=[
                 self.data._root_link_pose_w.data,
-                None, #self.data._root_link_state_w.data,
-                None, #self.data._root_state_w.data,
+                None,  # self.data._root_link_state_w.data,
+                None,  # self.data._root_state_w.data,
             ],
             device=self.device,
         )
@@ -498,7 +496,7 @@ class Articulation(BaseArticulation):
 
         .. note::
             This method expect partial data or full data.
-        
+
         .. tip::
             For maximum performance we recommend using the index method. This is because in PhysX, the tensor API
             is only supporting indexing, hence masks need to be converted to indices.
@@ -525,9 +523,9 @@ class Articulation(BaseArticulation):
             outputs=[
                 self.data._root_com_pose_w.data,
                 self.data._root_link_pose_w.data,
-                None, #self.data._root_com_state_w.data,
-                None, #self.data._root_link_state_w.data,
-                None, #self.data._root_state_w.data,
+                None,  # self.data._root_com_state_w.data,
+                None,  # self.data._root_link_state_w.data,
+                None,  # self.data._root_state_w.data,
             ],
             device=self.device,
         )
@@ -558,7 +556,7 @@ class Articulation(BaseArticulation):
 
         .. note::
             This method expect full data.
-        
+
         .. tip::
             For maximum performance we recommend using the index method. This is because in PhysX, the tensor API
             is only supporting indexing, hence masks need to be converted to indices.
@@ -659,8 +657,8 @@ class Articulation(BaseArticulation):
             outputs=[
                 self.data._root_com_vel_w.data,
                 self.data._body_com_acc_w.data,
-                None, #self.data._root_state_w.data,
-                None, #self.data._root_com_state_w.data,
+                None,  # self.data._root_state_w.data,
+                None,  # self.data._root_com_state_w.data,
             ],
             device=self.device,
         )
@@ -744,9 +742,9 @@ class Articulation(BaseArticulation):
                 self.data._root_link_vel_w.data,
                 self.data._root_com_vel_w.data,
                 self.data._body_com_acc_w.data,
-                None, #self.data._root_link_state_w.data,
-                None, #self.data._root_state_w.data,
-                None, #self.data._root_com_state_w.data,
+                None,  # self.data._root_link_state_w.data,
+                None,  # self.data._root_state_w.data,
+                None,  # self.data._root_com_state_w.data,
             ],
             device=self.device,
         )
@@ -788,7 +786,6 @@ class Articulation(BaseArticulation):
             env_ids = self._ALL_INDICES
         # Set full data to True to ensure the the right code path is taken inside the kernel.
         self.write_root_link_velocity_to_sim_index(root_velocity, env_ids=env_ids, full_data=True)
-
 
     def write_joint_state_to_sim(
         self,
@@ -1000,7 +997,6 @@ class Articulation(BaseArticulation):
             joint_ids = self._ALL_JOINT_INDICES
         # Set full data to True to ensure the the right code path is taken inside the kernel.
         self.write_joint_velocity_to_sim_index(velocity, joint_ids=joint_ids, env_ids=env_ids, full_data=True)
-
 
     """
     Operations - Simulation Parameters Writers.
@@ -1289,7 +1285,9 @@ class Articulation(BaseArticulation):
         else:
             joint_ids = self._ALL_JOINT_INDICES
         # Set full data to True to ensure the right code path is taken inside the kernel.
-        self.write_joint_position_limit_to_sim_index(limits, joint_ids=joint_ids, env_ids=env_ids, full_data=True, warn_limit_violation=warn_limit_violation)
+        self.write_joint_position_limit_to_sim_index(
+            limits, joint_ids=joint_ids, env_ids=env_ids, full_data=True, warn_limit_violation=warn_limit_violation
+        )
 
     def write_joint_velocity_limit_to_sim_index(
         self,
@@ -1709,7 +1707,7 @@ class Articulation(BaseArticulation):
             joint_viscous_friction_coeff=joint_viscous_friction_coeff,
             joint_ids=joint_ids,
             env_ids=env_ids,
-            full_data=True
+            full_data=True,
         )
 
     def write_joint_dynamic_friction_coefficient_to_sim_index(
@@ -1791,7 +1789,9 @@ class Articulation(BaseArticulation):
         else:
             joint_ids = self._ALL_JOINT_INDICES
         # Set full data to True to ensure the right code path is taken inside the kernel.
-        self.write_joint_dynamic_friction_coefficient_to_sim_index(joint_dynamic_friction_coeff, joint_ids=joint_ids, env_ids=env_ids, full_data=True)
+        self.write_joint_dynamic_friction_coefficient_to_sim_index(
+            joint_dynamic_friction_coeff, joint_ids=joint_ids, env_ids=env_ids, full_data=True
+        )
 
     def write_joint_viscous_friction_coefficient_to_sim_index(
         self,
@@ -1875,7 +1875,9 @@ class Articulation(BaseArticulation):
         else:
             joint_ids = self._ALL_JOINT_INDICES
         # Set full data to True to ensure the right code path is taken inside the kernel.
-        self.write_joint_viscous_friction_coefficient_to_sim_index(joint_viscous_friction_coeff, joint_ids=joint_ids, env_ids=env_ids, full_data=True)
+        self.write_joint_viscous_friction_coefficient_to_sim_index(
+            joint_viscous_friction_coeff, joint_ids=joint_ids, env_ids=env_ids, full_data=True
+        )
 
     """
     Operations - Setters.
@@ -1999,8 +2001,14 @@ class Articulation(BaseArticulation):
             device=self.device,
         )
         # Set into simulation, note that when updating "model" properties with PhysX we need to do it on CPU.
+        # Convert from wp.transformf to flat (N, M, 7) array for PhysX
         cpu_env_ids = wp.clone(env_ids, device="cpu")
-        self.root_view.set_coms(wp.clone(self.data._body_com_pose_b.data, device="cpu"), indices=cpu_env_ids)
+        body_com_flat = (
+            wp.clone(self.data._body_com_pose_b.data, device="cpu")
+            .view(wp.float32)
+            .reshape((self.num_instances, self.num_bodies, 7))
+        )
+        self.root_view.set_coms(body_com_flat, indices=cpu_env_ids)
 
     def set_coms_mask(
         self,
@@ -2121,7 +2129,7 @@ class Articulation(BaseArticulation):
 
         This function does not apply the joint targets to the simulation. It only fills the buffers with
         the desired values. To apply the joint targets, call the :meth:`write_data_to_sim` function.
-        
+
         .. note::
             This method expects partial data or full data.
 
@@ -2390,7 +2398,7 @@ class Articulation(BaseArticulation):
             device=self.device,
         )
         # Only updates internal buffers, does not apply the stiffness to the simulation.
-        
+
     def set_fixed_tendon_stiffness_mask(
         self,
         stiffness: torch.Tensor | wp.array,
@@ -2425,7 +2433,9 @@ class Articulation(BaseArticulation):
         else:
             fixed_tendon_ids = self._ALL_FIXED_TENDON_INDICES
         # Set full data to True to ensure the right code path is taken inside the kernel.
-        self.set_fixed_tendon_stiffness_index(stiffness, fixed_tendon_ids=fixed_tendon_ids, env_ids=env_ids, full_data=True)
+        self.set_fixed_tendon_stiffness_index(
+            stiffness, fixed_tendon_ids=fixed_tendon_ids, env_ids=env_ids, full_data=True
+        )
 
     def set_fixed_tendon_damping_index(
         self,
@@ -2479,7 +2489,7 @@ class Articulation(BaseArticulation):
         env_mask: wp.array | None = None,
     ) -> None:
         """Set fixed tendon damping into internal buffers using masks.
-        
+
         This function does not apply the tendon damping to the simulation. It only fills the buffers with
         the desired values. To apply the tendon damping, call the
         :meth:`write_fixed_tendon_properties_to_sim_mask` method.
@@ -2561,7 +2571,7 @@ class Articulation(BaseArticulation):
         env_mask: wp.array | None = None,
     ) -> None:
         """Set fixed tendon limit stiffness into internal buffers using masks.
-        
+
         This function does not apply the tendon limit stiffness to the simulation. It only fills the buffers with
         the desired values. To apply the tendon limit stiffness, call the
         :meth:`write_fixed_tendon_properties_to_sim_mask` method.
@@ -2588,7 +2598,9 @@ class Articulation(BaseArticulation):
         else:
             fixed_tendon_ids = self._ALL_FIXED_TENDON_INDICES
         # Set full data to True to ensure the right code path is taken inside the kernel.
-        self.set_fixed_tendon_limit_stiffness_index(limit_stiffness, fixed_tendon_ids=fixed_tendon_ids, env_ids=env_ids, full_data=True)
+        self.set_fixed_tendon_limit_stiffness_index(
+            limit_stiffness, fixed_tendon_ids=fixed_tendon_ids, env_ids=env_ids, full_data=True
+        )
 
     def set_fixed_tendon_position_limit_index(
         self,
@@ -2598,7 +2610,7 @@ class Articulation(BaseArticulation):
         full_data: bool = False,
     ) -> None:
         """Set fixed tendon position limit into internal buffers using indices.
-        
+
         This function does not apply the tendon position limit to the simulation. It only fills the buffers with
         the desired values. To apply the tendon position limit, call the
         :meth:`write_fixed_tendon_properties_to_sim_index` method.
@@ -2643,7 +2655,7 @@ class Articulation(BaseArticulation):
         env_mask: wp.array | None = None,
     ) -> None:
         """Set fixed tendon position limit into internal buffers using masks.
-        
+
         This function does not apply the tendon position limit to the simulation. It only fills the buffers with
         the desired values. To apply the tendon position limit, call the
         :meth:`write_fixed_tendon_properties_to_sim_mask` method.
@@ -2670,7 +2682,9 @@ class Articulation(BaseArticulation):
         else:
             fixed_tendon_ids = self._ALL_FIXED_TENDON_INDICES
         # Set full data to True to ensure the right code path is taken inside the kernel.
-        self.set_fixed_tendon_position_limit_index(limit, fixed_tendon_ids=fixed_tendon_ids, env_ids=env_ids, full_data=True)
+        self.set_fixed_tendon_position_limit_index(
+            limit, fixed_tendon_ids=fixed_tendon_ids, env_ids=env_ids, full_data=True
+        )
 
     def set_fixed_tendon_rest_length_index(
         self,
@@ -2680,7 +2694,7 @@ class Articulation(BaseArticulation):
         full_data: bool = False,
     ) -> None:
         """Set fixed tendon rest length into internal buffers using indices.
-        
+
         This function does not apply the tendon rest length to the simulation. It only fills the buffers with
         the desired values. To apply the tendon rest length, call the
         :meth:`write_fixed_tendon_properties_to_sim_index` method.
@@ -2725,7 +2739,7 @@ class Articulation(BaseArticulation):
         env_mask: wp.array | None = None,
     ) -> None:
         """Set fixed tendon rest length into internal buffers using masks.
-        
+
         This function does not apply the tendon rest length to the simulation. It only fills the buffers with
         the desired values. To apply the tendon rest length, call the
         :meth:`write_fixed_tendon_properties_to_sim_mask` method.
@@ -2752,7 +2766,9 @@ class Articulation(BaseArticulation):
         else:
             fixed_tendon_ids = self._ALL_FIXED_TENDON_INDICES
         # Set full data to True to ensure the right code path is taken inside the kernel.
-        self.set_fixed_tendon_rest_length_index(rest_length, fixed_tendon_ids=fixed_tendon_ids, env_ids=env_ids, full_data=True)
+        self.set_fixed_tendon_rest_length_index(
+            rest_length, fixed_tendon_ids=fixed_tendon_ids, env_ids=env_ids, full_data=True
+        )
 
     def set_fixed_tendon_offset_index(
         self,
@@ -2762,7 +2778,7 @@ class Articulation(BaseArticulation):
         full_data: bool = False,
     ) -> None:
         """Set fixed tendon offset into internal buffers using indices.
-        
+
         This function does not apply the tendon offset to the simulation. It only fills the buffers with
         the desired values. To apply the tendon offset, call the
         :meth:`write_fixed_tendon_properties_to_sim_index` method.
@@ -2807,7 +2823,7 @@ class Articulation(BaseArticulation):
         env_mask: wp.array | None = None,
     ) -> None:
         """Set fixed tendon offset into internal buffers using masks.
-        
+
         This function does not apply the tendon offset to the simulation. It only fills the buffers with
         the desired values. To apply the tendon offset, call the
         :meth:`write_fixed_tendon_properties_to_sim_mask` method.
@@ -2963,7 +2979,9 @@ class Articulation(BaseArticulation):
         else:
             spatial_tendon_ids = self._ALL_SPATIAL_TENDON_INDICES
         # Set full data to True to ensure the right code path is taken inside the kernel.
-        self.set_spatial_tendon_stiffness_index(stiffness, spatial_tendon_ids=spatial_tendon_ids, env_ids=env_ids, full_data=True)
+        self.set_spatial_tendon_stiffness_index(
+            stiffness, spatial_tendon_ids=spatial_tendon_ids, env_ids=env_ids, full_data=True
+        )
 
     def set_spatial_tendon_damping_index(
         self,
@@ -3045,7 +3063,9 @@ class Articulation(BaseArticulation):
         else:
             spatial_tendon_ids = self._ALL_SPATIAL_TENDON_INDICES
         # Set full data to True to ensure the right code path is taken inside the kernel.
-        self.set_spatial_tendon_damping_index(damping, spatial_tendon_ids=spatial_tendon_ids, env_ids=env_ids, full_data=True)
+        self.set_spatial_tendon_damping_index(
+            damping, spatial_tendon_ids=spatial_tendon_ids, env_ids=env_ids, full_data=True
+        )
 
     def set_spatial_tendon_limit_stiffness_index(
         self,
@@ -3127,7 +3147,9 @@ class Articulation(BaseArticulation):
         else:
             spatial_tendon_ids = self._ALL_SPATIAL_TENDON_INDICES
         # Set full data to True to ensure the right code path is taken inside the kernel.
-        self.set_spatial_tendon_limit_stiffness_index(limit_stiffness, spatial_tendon_ids=spatial_tendon_ids, env_ids=env_ids, full_data=True)
+        self.set_spatial_tendon_limit_stiffness_index(
+            limit_stiffness, spatial_tendon_ids=spatial_tendon_ids, env_ids=env_ids, full_data=True
+        )
 
     def set_spatial_tendon_offset_index(
         self,
@@ -3209,7 +3231,9 @@ class Articulation(BaseArticulation):
         else:
             spatial_tendon_ids = self._ALL_SPATIAL_TENDON_INDICES
         # Set full data to True to ensure the right code path is taken inside the kernel.
-        self.set_spatial_tendon_offset_index(offset, spatial_tendon_ids=spatial_tendon_ids, env_ids=env_ids, full_data=True)
+        self.set_spatial_tendon_offset_index(
+            offset, spatial_tendon_ids=spatial_tendon_ids, env_ids=env_ids, full_data=True
+        )
 
     def write_spatial_tendon_properties_to_sim_index(
         self,
@@ -3244,7 +3268,7 @@ class Articulation(BaseArticulation):
         env_mask: wp.array | None = None,
     ) -> None:
         """Write spatial tendon properties into the simulation using masks.
-        
+
         .. tip::
             For maximum performance we recommend using the mask method. This is because in PhysX, the tensor API
             is only supporting indexing, hence masks need to be converted to indices.
@@ -3344,7 +3368,9 @@ class Articulation(BaseArticulation):
         self._ALL_JOINT_INDICES = wp.array(np.arange(self.num_joints, dtype=np.int32), device=self.device)
         self._ALL_BODY_INDICES = wp.array(np.arange(self.num_bodies, dtype=np.int32), device=self.device)
         self._ALL_FIXED_TENDON_INDICES = wp.array(np.arange(self.num_fixed_tendons, dtype=np.int32), device=self.device)
-        self._ALL_SPATIAL_TENDON_INDICES = wp.array(np.arange(self.num_spatial_tendons, dtype=np.int32), device=self.device)
+        self._ALL_SPATIAL_TENDON_INDICES = wp.array(
+            np.arange(self.num_spatial_tendons, dtype=np.int32), device=self.device
+        )
 
         # external wrench composer
         self._instantaneous_wrench_composer = WrenchComposer(self)
@@ -3379,16 +3405,10 @@ class Articulation(BaseArticulation):
         # default state
         # -- root state
         # Note we cast to tuple to avoid torch/numpy type mismatch.
-        default_root_pose = (
-            tuple(self.cfg.init_state.pos)
-            + tuple(self.cfg.init_state.rot)
-        )
-        default_root_vel = (
-            tuple(self.cfg.init_state.lin_vel)
-            + tuple(self.cfg.init_state.ang_vel)
-        )
+        default_root_pose = tuple(self.cfg.init_state.pos) + tuple(self.cfg.init_state.rot)
+        default_root_vel = tuple(self.cfg.init_state.lin_vel) + tuple(self.cfg.init_state.ang_vel)
         default_root_pose = np.tile(np.array(default_root_pose, dtype=np.float32), (self.num_instances, 1))
-        default_root_vel = np.tile(np.array(default_root_vel, dtype=np.float32), (self.num_instances, 1))   
+        default_root_vel = np.tile(np.array(default_root_vel, dtype=np.float32), (self.num_instances, 1))
         self.data.default_root_pose = wp.array(default_root_pose, dtype=wp.transformf, device=self.device)
         self.data.default_root_vel = wp.array(default_root_vel, dtype=wp.spatial_vectorf, device=self.device)
 
@@ -3673,7 +3693,7 @@ class Articulation(BaseArticulation):
             joint_indices = actuator.joint_indices
             if actuator.joint_indices == slice(None) or actuator.joint_indices is None:
                 joint_indices = self._ALL_JOINT_INDICES
-            if hasattr(actuator, 'gear_ratio'):
+            if hasattr(actuator, "gear_ratio"):
                 gear_ratio = actuator.gear_ratio
             else:
                 gear_ratio = None
@@ -3781,18 +3801,25 @@ class Articulation(BaseArticulation):
 
         # read out all joint parameters from simulation
         # -- gains
-        stiffnesses = wp.to_torch(self.root_view.get_dof_stiffnesses())[0].tolist()
-        dampings = wp.to_torch(self.root_view.get_dof_dampings())[0].tolist()
+        # Use data properties which have already been cloned and stored during initialization
+        # This avoids issues with indexedarray or empty arrays from root_view
+        stiffnesses = wp.to_torch(self.data.joint_stiffness)[0].cpu().tolist()
+        dampings = wp.to_torch(self.data.joint_damping)[0].cpu().tolist()
         # -- properties
-        armatures = wp.to_torch(self.root_view.get_dof_armatures())[0].tolist()
-        friction_props = wp.to_torch(self.root_view.get_dof_friction_properties())
-        static_frictions = friction_props[:, :, 0][0].tolist()
-        dynamic_frictions = friction_props[:, :, 1][0].tolist()
-        viscous_frictions = friction_props[:, :, 2][0].tolist()
+        armatures = wp.to_torch(self.data.joint_armature)[0].cpu().tolist()
+        # For friction, use the individual components from data
+        friction_coeff = wp.to_torch(self.data.joint_friction_coeff)[0].cpu()
+        dynamic_friction_coeff = wp.to_torch(self.data.joint_dynamic_friction_coeff)[0].cpu()
+        viscous_friction_coeff = wp.to_torch(self.data.joint_viscous_friction_coeff)[0].cpu()
+        static_frictions = friction_coeff.tolist()
+        dynamic_frictions = dynamic_friction_coeff.tolist()
+        viscous_frictions = viscous_friction_coeff.tolist()
         # -- limits
-        position_limits = wp.to_torch(self.root_view.get_dof_limits())[0].tolist()
-        velocity_limits = wp.to_torch(self.root_view.get_dof_max_velocities())[0].tolist()
-        effort_limits = wp.to_torch(self.root_view.get_dof_max_forces())[0].tolist()
+        # joint_pos_limits is vec2f array, convert to torch and extract [lower, upper] pairs
+        position_limits_torch = wp.to_torch(self.data.joint_pos_limits)[0].cpu()  # shape: (num_joints, 2)
+        position_limits = [tuple(pos_limit.tolist()) for pos_limit in position_limits_torch]
+        velocity_limits = wp.to_torch(self.data.joint_vel_limits)[0].cpu().tolist()
+        effort_limits = wp.to_torch(self.data.joint_effort_limits)[0].cpu().tolist()
         # create table for term information
         joint_table = PrettyTable()
         joint_table.title = f"Simulation Joint Information (Prim path: {self.cfg.prim_path})"
@@ -3832,13 +3859,16 @@ class Articulation(BaseArticulation):
         # read out all fixed tendon parameters from simulation
         if self.num_fixed_tendons > 0:
             # -- gains
-            ft_stiffnesses = wp.to_torch(self.root_view.get_fixed_tendon_stiffnesses())[0].tolist()
-            ft_dampings = wp.to_torch(self.root_view.get_fixed_tendon_dampings())[0].tolist()
+            # Use data properties which have already been cloned and stored during initialization
+            ft_stiffnesses = wp.to_torch(self.data.fixed_tendon_stiffness)[0].cpu().tolist()
+            ft_dampings = wp.to_torch(self.data.fixed_tendon_damping)[0].cpu().tolist()
             # -- limits
-            ft_limit_stiffnesses = wp.to_torch(self.root_view.get_fixed_tendon_limit_stiffnesses())[0].tolist()
-            ft_limits = wp.to_torch(self.root_view.get_fixed_tendon_limits())[0].tolist()
-            ft_rest_lengths = wp.to_torch(self.root_view.get_fixed_tendon_rest_lengths())[0].tolist()
-            ft_offsets = wp.to_torch(self.root_view.get_fixed_tendon_offsets())[0].tolist()
+            ft_limit_stiffnesses = wp.to_torch(self.data.fixed_tendon_limit_stiffness)[0].cpu().tolist()
+            # fixed_tendon_pos_limits is vec2f array
+            ft_limits_torch = wp.to_torch(self.data.fixed_tendon_pos_limits)[0].cpu()
+            ft_limits = [tuple(limit.tolist()) for limit in ft_limits_torch]
+            ft_rest_lengths = wp.to_torch(self.data.fixed_tendon_rest_length)[0].cpu().tolist()
+            ft_offsets = wp.to_torch(self.data.fixed_tendon_offset)[0].cpu().tolist()
             # create table for term information
             tendon_table = PrettyTable()
             tendon_table.title = f"Simulation Fixed Tendon Information (Prim path: {self.cfg.prim_path})"
@@ -3881,11 +3911,12 @@ class Articulation(BaseArticulation):
 
         if self.num_spatial_tendons > 0:
             # -- gains
-            st_stiffnesses = wp.to_torch(self.root_view.get_spatial_tendon_stiffnesses())[0].tolist()
-            st_dampings = wp.to_torch(self.root_view.get_spatial_tendon_dampings())[0].tolist()
+            # Use data properties which have already been cloned and stored during initialization
+            st_stiffnesses = wp.to_torch(self.data.spatial_tendon_stiffness)[0].cpu().tolist()
+            st_dampings = wp.to_torch(self.data.spatial_tendon_damping)[0].cpu().tolist()
             # -- limits
-            st_limit_stiffnesses = wp.to_torch(self.root_view.get_spatial_tendon_limit_stiffnesses())[0].tolist()
-            st_offsets = wp.to_torch(self.root_view.get_spatial_tendon_offsets())[0].tolist()
+            st_limit_stiffnesses = wp.to_torch(self.data.spatial_tendon_limit_stiffness)[0].cpu().tolist()
+            st_offsets = wp.to_torch(self.data.spatial_tendon_offset)[0].cpu().tolist()
             # create table for term information
             tendon_table = PrettyTable()
             tendon_table.title = f"Simulation Spatial Tendon Information (Prim path: {self.cfg.prim_path})"
@@ -3912,22 +3943,25 @@ class Articulation(BaseArticulation):
             logger.info(
                 f"Simulation parameters for spatial tendons in {self.cfg.prim_path}:\n" + tendon_table.get_string()
             )
-    
+
     def _resolve_env_ids(self, env_ids: Sequence[int] | torch.Tensor | wp.array | None) -> wp.array:
         """Resolve environment indices to a warp array.
 
         .. note::
             We need to convert torch tensors to warp arrays since the TensorAPI views only support warp arrays.
-        
+
         Args:
             env_ids: Environment indices. If None, then all indices are used.
-        
+
         Returns:
             A warp array of environment indices.
         """
         if (env_ids is None) or (env_ids == slice(None)):
             return self._ALL_INDICES
         if isinstance(env_ids, torch.Tensor):
+            # Convert int64 to int32 if needed, as warp expects int32
+            if env_ids.dtype == torch.int64:
+                env_ids = env_ids.to(torch.int32)
             return wp.from_torch(env_ids, dtype=wp.int32)
         if isinstance(env_ids, list):
             return wp.array(env_ids, dtype=wp.int32, device=self.device)
@@ -3938,10 +3972,10 @@ class Articulation(BaseArticulation):
 
         .. note::
             We do not need to convert torch tensors to warp arrays since they never get passed to the TensorAPI views.
-        
+
         Args:
             joint_ids: Joint indices. If None, then all indices are used.
-        
+
         Returns:
             A warp array of joint indices or a tensor of joint indices.
         """
@@ -3953,10 +3987,10 @@ class Articulation(BaseArticulation):
 
     def _resolve_body_ids(self, body_ids: Sequence[int] | torch.Tensor | wp.array | None) -> wp.array | torch.Tensor:
         """Resolve body indices to a warp array or tensor.
-        
+
         Args:
             body_ids: Body indices. If None, then all indices are used.
-        
+
         Returns:
             A warp array of body indices or a tensor of body indices.
         """
@@ -3966,12 +4000,14 @@ class Articulation(BaseArticulation):
             return self._ALL_BODY_INDICES
         return body_ids
 
-    def _resolve_fixed_tendon_ids(self, tendon_ids: Sequence[int] | torch.Tensor | wp.array | None) -> wp.array | torch.Tensor:
+    def _resolve_fixed_tendon_ids(
+        self, tendon_ids: Sequence[int] | torch.Tensor | wp.array | None
+    ) -> wp.array | torch.Tensor:
         """Resolve tendon indices to a warp array or tensor.
-        
+
         Args:
             tendon_ids: Tendon indices. If None, then all indices are used.
-        
+
         Returns:
             A warp array of tendon indices or a tensor of tendon indices.
         """
@@ -3981,13 +4017,14 @@ class Articulation(BaseArticulation):
             return self._ALL_FIXED_TENDON_INDICES
         return tendon_ids
 
-    
-    def _resolve_spatial_tendon_ids(self, spatial_tendon_ids: Sequence[int] | torch.Tensor | wp.array | None) -> wp.array | torch.Tensor:
+    def _resolve_spatial_tendon_ids(
+        self, spatial_tendon_ids: Sequence[int] | torch.Tensor | wp.array | None
+    ) -> wp.array | torch.Tensor:
         """Resolve spatial tendon indices to a warp array or tensor.
-        
+
         Args:
             spatial_tendon_ids: Spatial tendon indices. If None, then all indices are used.
-        
+
         Returns:
             A warp array of spatial tendon indices or a tensor of spatial tendon indices.
         """
@@ -4027,7 +4064,14 @@ class Articulation(BaseArticulation):
             DeprecationWarning,
             stacklevel=2,
         )
-        self.write_joint_friction_coefficient_to_sim_index(joint_friction_coeff, joint_dynamic_friction_coeff=joint_dynamic_friction_coeff, joint_viscous_friction_coeff=joint_viscous_friction_coeff, joint_ids=joint_ids, env_ids=env_ids, full_data=full_data)
+        self.write_joint_friction_coefficient_to_sim_index(
+            joint_friction_coeff,
+            joint_dynamic_friction_coeff=joint_dynamic_friction_coeff,
+            joint_viscous_friction_coeff=joint_viscous_friction_coeff,
+            joint_ids=joint_ids,
+            env_ids=env_ids,
+            full_data=full_data,
+        )
 
     def write_joint_viscous_friction_coefficient_to_sim(
         self,
@@ -4043,7 +4087,9 @@ class Articulation(BaseArticulation):
             DeprecationWarning,
             stacklevel=2,
         )
-        self.write_joint_viscous_friction_coefficient_to_sim_index(joint_viscous_friction_coeff, joint_ids=joint_ids, env_ids=env_ids, full_data=full_data)
+        self.write_joint_viscous_friction_coefficient_to_sim_index(
+            joint_viscous_friction_coeff, joint_ids=joint_ids, env_ids=env_ids, full_data=full_data
+        )
 
     def write_joint_dynamic_friction_coefficient_to_sim(
         self,
@@ -4059,10 +4105,13 @@ class Articulation(BaseArticulation):
             DeprecationWarning,
             stacklevel=2,
         )
-        self.write_joint_dynamic_friction_coefficient_to_sim_index(joint_dynamic_friction_coeff, joint_ids=joint_ids, env_ids=env_ids, full_data=full_data)
+        self.write_joint_dynamic_friction_coefficient_to_sim_index(
+            joint_dynamic_friction_coeff, joint_ids=joint_ids, env_ids=env_ids, full_data=full_data
+        )
 
     def write_root_state_to_sim(
-        self, root_state: torch.Tensor | wp.array,
+        self,
+        root_state: torch.Tensor | wp.array,
         env_ids: Sequence[int] | torch.Tensor | wp.array | None = None,
     ) -> None:
         """Deprecated, same as :meth:`write_root_link_pose_to_sim_index` and :meth:`write_root_com_velocity_to_sim_index`."""
@@ -4076,7 +4125,8 @@ class Articulation(BaseArticulation):
         self.write_root_com_velocity_to_sim_index(root_state[:, 7:], env_ids=env_ids)
 
     def write_root_com_state_to_sim(
-        self, root_state: torch.Tensor | wp.array,
+        self,
+        root_state: torch.Tensor | wp.array,
         env_ids: Sequence[int] | torch.Tensor | wp.array | None = None,
     ) -> None:
         """Deprecated, same as :meth:`write_root_com_pose_to_sim_index` and :meth:`write_root_com_velocity_to_sim_index`."""
@@ -4090,7 +4140,8 @@ class Articulation(BaseArticulation):
         self.write_root_com_velocity_to_sim_index(root_state[:, 7:], env_ids=env_ids)
 
     def write_root_link_state_to_sim(
-        self, root_state: torch.Tensor | wp.array,
+        self,
+        root_state: torch.Tensor | wp.array,
         env_ids: Sequence[int] | torch.Tensor | wp.array | None = None,
     ) -> None:
         """Deprecated, same as :meth:`write_root_link_pose_to_sim_index` and :meth:`write_root_link_velocity_to_sim_index`."""
