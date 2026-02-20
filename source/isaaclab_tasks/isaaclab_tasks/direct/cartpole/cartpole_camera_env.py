@@ -99,6 +99,24 @@ class CartpoleDepthCameraEnvCfg(CartpoleRGBCameraEnvCfg):
 
 
 @configclass
+class CartpoleDepthNewCameraEnvCfg(CartpoleRGBCameraEnvCfg):
+    # camera
+    tiled_camera: TiledCameraCfg = TiledCameraCfg(
+        prim_path="/World/envs/env_.*/Camera",
+        offset=TiledCameraCfg.OffsetCfg(pos=(-5.0, 0.0, 2.0), rot=(0.0, 0.0, 0.0, 1.0), convention="world"),
+        data_types=["depth_new"],
+        spawn=sim_utils.PinholeCameraCfg(
+            focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
+        ),
+        width=100,
+        height=100,
+    )
+
+    # spaces
+    observation_space = [tiled_camera.height, tiled_camera.width, 1]
+
+
+@configclass
 class CartpoleAlbedoCameraEnvCfg(CartpoleRGBCameraEnvCfg):
     # camera
     tiled_camera: TiledCameraCfg = TiledCameraCfg(
@@ -176,6 +194,7 @@ class CartpoleCameraEnv(DirectRLEnv):
     cfg: (
         CartpoleRGBCameraEnvCfg
         | CartpoleDepthCameraEnvCfg
+        | CartpoleDepthNewCameraEnvCfg
         | CartpoleAlbedoCameraEnvCfg
         | CartpoleSimpleShadingConstantCameraEnvCfg
         | CartpoleSimpleShadingDiffuseCameraEnvCfg
@@ -183,7 +202,16 @@ class CartpoleCameraEnv(DirectRLEnv):
     )
 
     def __init__(
-        self, cfg: CartpoleRGBCameraEnvCfg | CartpoleDepthCameraEnvCfg, render_mode: str | None = None, **kwargs
+        self,
+        cfg: CartpoleRGBCameraEnvCfg
+        | CartpoleDepthCameraEnvCfg
+        | CartpoleDepthNewCameraEnvCfg
+        | CartpoleAlbedoCameraEnvCfg
+        | CartpoleSimpleShadingConstantCameraEnvCfg
+        | CartpoleSimpleShadingDiffuseCameraEnvCfg
+        | CartpoleSimpleShadingFullCameraEnvCfg,
+        render_mode: str | None = None,
+        **kwargs,
     ):
         super().__init__(cfg, render_mode, **kwargs)
 
@@ -245,7 +273,7 @@ class CartpoleCameraEnv(DirectRLEnv):
             # normalize the camera data for better training results
             mean_tensor = torch.mean(camera_data, dim=(1, 2), keepdim=True)
             camera_data -= mean_tensor
-        elif "depth" in self.cfg.tiled_camera.data_types:
+        elif "depth" in self.cfg.tiled_camera.data_types or "depth_new" in self.cfg.tiled_camera.data_types:
             camera_data = self._tiled_camera.data.output[data_type]
             camera_data[camera_data == float("inf")] = 0
         observations = {"policy": camera_data.clone()}

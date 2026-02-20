@@ -56,6 +56,7 @@ class Camera(SensorBase):
     - ``"distance_to_camera"``: An image containing the distance to camera optical center.
     - ``"distance_to_image_plane"``: An image containing distances of 3D points from camera plane along camera's z-axis.
     - ``"depth"``: The same as ``"distance_to_image_plane"``.
+    - ``"depth_new"``: A depth image from the Depth AOV.
     - ``"simple_shading_constant_diffuse"``: Simple shading (constant diffuse) RGB approximation.
     - ``"simple_shading_diffuse_mdl"``: Simple shading (diffuse MDL) RGB approximation.
     - ``"simple_shading_full_mdl"``: Simple shading (full MDL) RGB approximation.
@@ -139,7 +140,7 @@ class Camera(SensorBase):
         isaac_sim_version = get_isaac_sim_version()
         if isaac_sim_version.major >= 6:
             # Set RTX flag to enable fast path if only depth or albedo is requested
-            supported_fast_types = {"distance_to_camera", "distance_to_image_plane", "depth", "albedo"}
+            supported_fast_types = {"distance_to_camera", "distance_to_image_plane", "depth", "depth_new", "albedo"}
             if all(data_type in supported_fast_types for data_type in self.cfg.data_types):
                 carb_settings_iface.set_bool("/rtx/sdg/force/disableColorRender", True)
 
@@ -526,6 +527,10 @@ class Camera(SensorBase):
                     rep.AnnotatorRegistry.register_annotator_from_aov(
                         aov="DiffuseAlbedoSD", output_data_type=np.uint8, output_channels=4
                     )
+                if name == "depth_new":
+                    rep.AnnotatorRegistry.register_annotator_from_aov(
+                        aov="Depth", output_data_type=np.float32, output_channels=1
+                    )
                 if name in self.SIMPLE_SHADING_MODES:
                     rep.AnnotatorRegistry.register_annotator_from_aov(
                         aov=self.SIMPLE_SHADING_AOV, output_data_type=np.uint8, output_channels=4
@@ -536,6 +541,7 @@ class Camera(SensorBase):
                 special_cases = {
                     "rgba": "rgb",
                     "depth": "distance_to_image_plane",
+                    "depth_new": "Depth",
                     "albedo": "DiffuseAlbedoSD",
                     **simple_shading_cases,
                 }
@@ -586,7 +592,7 @@ class Camera(SensorBase):
                     self._data.output[name][self._data.output[name] > self.cfg.spawn.clipping_range[1]] = torch.inf
                 # apply defined clipping behavior
                 if (
-                    name == "distance_to_camera" or name == "distance_to_image_plane"
+                    name == "distance_to_camera" or name == "distance_to_image_plane" or name == "depth_new"
                 ) and self.cfg.depth_clipping_behavior != "none":
                     self._data.output[name][torch.isinf(self._data.output[name])] = (
                         0.0 if self.cfg.depth_clipping_behavior == "zero" else self.cfg.spawn.clipping_range[1]
@@ -714,9 +720,11 @@ class Camera(SensorBase):
             #       have a unified behavior between all cameras, we clip both outputs to the maximum value defined.
             if name == "distance_to_camera":
                 self._data.output[name][self._data.output[name] > self.cfg.spawn.clipping_range[1]] = torch.inf
+            if name == "depth_new":
+                self._data.output[name][self._data.output[name] > self.cfg.spawn.clipping_range[1]] = torch.inf
             # clip the data if needed
             if (
-                name == "distance_to_camera" or name == "distance_to_image_plane"
+                name == "distance_to_camera" or name == "distance_to_image_plane" or name == "depth_new"
             ) and self.cfg.depth_clipping_behavior != "none":
                 self._data.output[name][torch.isinf(self._data.output[name])] = (
                     0.0 if self.cfg.depth_clipping_behavior == "zero" else self.cfg.spawn.clipping_range[1]
@@ -757,7 +765,9 @@ class Camera(SensorBase):
             else:
                 data = data.view(height, width, 1)
         # make sure buffer dimensions are consistent as (H, W, C)
-        elif name == "distance_to_camera" or name == "distance_to_image_plane" or name == "depth":
+        elif (
+            name == "distance_to_camera" or name == "distance_to_image_plane" or name == "depth" or name == "depth_new"
+        ):
             data = data.view(height, width, 1)
         # we only return the RGB channels from the RGBA output if rgb is required
         # normals return (x, y, z) in first 3 channels, 4th channel is unused
