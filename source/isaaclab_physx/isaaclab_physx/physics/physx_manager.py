@@ -453,7 +453,8 @@ class PhysxManager(PhysicsManager):
             settings.set_bool("/physics/suppressReadback", True)
             PhysicsManager._device = f"cuda:{device_id}"
         else:
-            settings.set_int("/physics/cudaDevice", -1)
+            # NOTE: Do NOT set /physics/cudaDevice to -1 for CPU.
+            # Isaac Sim's own set_device() deliberately leaves this unset on CPU.
             settings.set_bool("/physics/suppressReadback", False)
             PhysicsManager._device = "cpu"
 
