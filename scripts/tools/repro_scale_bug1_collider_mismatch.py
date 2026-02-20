@@ -164,7 +164,10 @@ def _spawn_usd_rigid_body(
             order_spec = Sdf.AttributeSpec(prim_spec, "xformOpOrder", Sdf.ValueTypeNames.TokenArray)
         order_spec.default = Vt.TokenArray(["xformOp:translate", "xformOp:orient", "xformOp:scale"])
 
-    UsdPhysics.RigidBodyAPI.Apply(prim)
+    if "Table" in prim_path:
+        UsdPhysics.RigidBodyAPI.Apply(prim)
+    else:
+        prim = stage.GetPrimAtPath(f"{prim_path}/Cube")
     if kinematic:
         prim.GetAttribute("physics:kinematicEnabled").Set(True)
 
@@ -308,7 +311,7 @@ def main():
 
     sim_view = omni.physics.tensors.create_simulation_view("warp", stage_id=stage_id)
     sim_view.set_subspace_roots("/")
-    rb_view = sim_view.create_rigid_body_view("/World/envs/env_*/Block*")
+    rb_view = sim_view.create_rigid_body_view("/World/envs/env_*/Block*/Cube")
 
     timeline = omni.timeline.get_timeline_interface()
     timeline.play()
