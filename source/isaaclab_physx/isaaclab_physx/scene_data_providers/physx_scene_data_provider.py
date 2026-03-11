@@ -99,11 +99,11 @@ class PhysxSceneDataProvider(BaseSceneDataProvider):
             stage: USD stage handle.
             simulation_context: Active simulation context.
         """
-        from isaacsim.core.simulation_manager import SimulationManager
+        from isaaclab_physx.physics import PhysxManager
 
         self._simulation_context = simulation_context
         self._stage = stage
-        self._physics_sim_view = SimulationManager.get_physics_sim_view()
+        self._physics_sim_view = PhysxManager.get_physics_sim_view()
         self._rigid_body_view = None
         self._xform_views: dict[str, Any] = {}
         self._xform_view_failures: set[str] = set()

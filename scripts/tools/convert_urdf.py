@@ -31,6 +31,28 @@ optional arguments:
 
 """Launch Isaac Sim Simulator first."""
 
+# Register Newton and MuJoCo USD schemas before Kit/USD loads so that
+# UsdSchemaRegistry picks up the definitions during its one-time initialization.
+# The isaacsim.pip.newton extension is excluded to avoid physics-engine version
+# conflicts, so the schemas must be discovered via PXR_PLUGINPATH_NAME.
+import importlib.util
+import os
+import pathlib
+
+_plugin_dirs: list[str] = []
+_newton_spec = importlib.util.find_spec("newton_usd_schemas")
+if _newton_spec and _newton_spec.origin:
+    _plugin_dirs.append(str(pathlib.Path(_newton_spec.origin).parent))
+_mjc_spec = importlib.util.find_spec("mujoco_usd_converter")
+if _mjc_spec and _mjc_spec.origin:
+    _plugins_dir = pathlib.Path(_mjc_spec.origin).parent / "plugins"
+    if _plugins_dir.is_dir():
+        _plugin_dirs.append(str(_plugins_dir))
+if _plugin_dirs:
+    _existing = os.environ.get("PXR_PLUGINPATH_NAME", "")
+    _new = ":".join(_plugin_dirs)
+    os.environ["PXR_PLUGINPATH_NAME"] = _new + (":" + _existing if _existing else "")
+
 import argparse
 
 from isaaclab.app import AppLauncher

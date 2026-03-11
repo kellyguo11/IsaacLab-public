@@ -105,7 +105,7 @@ isaac.startup.ros_bridge_extension = ""
 metricsAssembler.changeListenerEnabled = false
 
 # explicitly disable omni.kit.pip_archive to prevent conflicting dependencies
-app.extensions.excluded = ["omni.kit.pip_archive"]
+app.extensions.excluded = ["omni.kit.pip_archive", "isaacsim.pip.newton"]
 
 # Extensions
 ###############################
@@ -190,11 +190,7 @@ enabled=true # Enable this for DLSS
 # Isaac Sim Extensions #
 ########################
 [dependencies]
-"isaacsim.simulation_app" = {}
-"isaacsim.core.api" = {}
-"isaacsim.core.cloner" = {}
-"isaacsim.core.utils" = {}
-"isaacsim.core.version" = {}
+"isaacsim.app.about" = {}
 
 ########################
 # Isaac Lab Extensions #
@@ -208,6 +204,10 @@ enabled=true # Enable this for DLSS
 "isaaclab_tasks" = {order = 1000}
 "isaaclab_mimic" = {order = 1000}
 "isaaclab_rl" = {order = 1000}
+"isaaclab_teleop" = {order = 1000}
+"isaaclab_ov" = {order = 1000}
+"isaaclab_contrib" = {order = 1000}
+"isaaclab_visualizers" = {order = 1000}
 
 # Asset path
 # set the S3 directory manually to the latest published S3

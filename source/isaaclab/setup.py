@@ -76,7 +76,11 @@ PYTORCH_INDEX_URL = ["https://download.pytorch.org/whl/cu128"]
 
 # Isaac Lab subpackages + Isaac Sim
 EXTRAS_REQUIRE = {
-    "isaacsim": ["isaacsim[all,extscache]==5.1.0"],
+    "isaacsim": [
+        # "isaacsim[all,extscache]==5.1.0",
+        "newton-usd-schemas==0.1.0",
+        "mujoco-usd-converter==0.1.0",
+    ],
     # Individual Isaac Lab sub-packages
     "assets": ["isaaclab_assets"],
     "physx": ["isaaclab_physx"],

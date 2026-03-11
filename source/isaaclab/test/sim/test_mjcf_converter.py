@@ -34,6 +34,7 @@ def test_setup_teardown():
     sim = SimulationContext(SimulationCfg(dt=dt))
 
     # Setup: Create MJCF config
+    # Note: MjcfConverter enables the extension itself; we only need the path for test data.
     enable_extension("isaacsim.asset.importer.mjcf")
     extension_path = get_extension_path_from_name("isaacsim.asset.importer.mjcf")
     config = MjcfConverterCfg(
