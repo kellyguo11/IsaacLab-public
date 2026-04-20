@@ -107,14 +107,23 @@ class TorchArray:
         """Warp dtype of the underlying array."""
         return self._warp.dtype
 
-    @property
-    def device(self) -> str:
-        """Device string of the underlying warp array."""
-        return self._warp.device
-
     def __len__(self) -> int:
         """Return the size of the first dimension."""
         return self._warp.shape[0]
+
+    def __getattr__(self, name: str):
+        """Delegate unknown attribute access to the underlying warp array.
+
+        This enables transparent interop with warp utilities such as :func:`warp.to_torch`,
+        which access warp-specific attributes (e.g., ``requires_grad``, ``device.is_cuda``,
+        ``grad``) directly on the array object.
+        """
+        # Delegate to the warp array for any attribute not on TorchArray itself.
+        # This makes wp.to_torch(torch_array) work seamlessly.
+        try:
+            return getattr(self._warp, name)
+        except AttributeError:
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def __repr__(self) -> str:
         """Return a string representation of the TorchArray."""
