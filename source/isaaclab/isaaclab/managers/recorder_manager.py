@@ -17,6 +17,7 @@ from prettytable import PrettyTable
 
 from isaaclab.utils import configclass
 from isaaclab.utils.datasets import EpisodeData, HDF5DatasetFileHandler
+from isaaclab.utils.warp import TorchArray
 
 from .manager_base import ManagerBase, ManagerTermBase
 from .manager_term_cfg import RecorderTermCfg
@@ -333,12 +334,16 @@ class RecorderManager(ManagerBase):
 
         if isinstance(value, dict):
             for sub_key, sub_value in value.items():
-                if isinstance(sub_value, wp.array):
+                if isinstance(sub_value, TorchArray):
+                    sub_value = sub_value.torch
+                elif isinstance(sub_value, wp.array):
                     sub_value = wp.to_torch(sub_value)
                 self.add_to_episodes(f"{key}/{sub_key}", sub_value, env_ids)
             return
 
-        if isinstance(value, wp.array):
+        if isinstance(value, TorchArray):
+            value = value.torch
+        elif isinstance(value, wp.array):
             value = wp.to_torch(value)
         value = value.clone()  # Clone once for all envs
         for value_index, env_id in enumerate(env_ids):
