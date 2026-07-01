@@ -38,7 +38,7 @@ newton = [
 rerun = [
     "newton[sim] @ git+https://github.com/newton-physics/newton.git@79e95bf5571d70a0a46c8eaedc80644531d27368",
     "rerun-sdk>=0.29.0",
-    "pyarrow==22.0.0",
+    "pyarrow==23.0.1",
 ]
 viser = [
     "newton[sim] @ git+https://github.com/newton-physics/newton.git@79e95bf5571d70a0a46c8eaedc80644531d27368",
@@ -50,7 +50,7 @@ all = [
     "PyOpenGL-accelerate",
     "pyglet>=2.1.6,<3",
     # Match rerun-sdk's supported Arrow stack and avoid resolver drift across environments.
-    "pyarrow==22.0.0",
+    "pyarrow==23.0.1",
     "rerun-sdk>=0.29.0",
     "typing-extensions>=4.15.0",
     "viser>=1.0.16",
