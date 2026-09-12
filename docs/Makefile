@@ -7,7 +7,7 @@ SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = .
 BUILDDIR      = _build
-DOCS_DEFAULT_REF ?= main
+DOCS_DEFAULT_REF ?= develop
 
 .PHONY: multi-docs
 multi-docs:

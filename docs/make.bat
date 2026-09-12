@@ -6,7 +6,7 @@ REM Command file to build Sphinx documentation
 
 set SOURCEDIR=.
 set BUILDDIR=_build
-if "%DOCS_DEFAULT_REF%" == "" set DOCS_DEFAULT_REF=main
+if "%DOCS_DEFAULT_REF%" == "" set DOCS_DEFAULT_REF=develop
 
 REM Check if a specific target was passed
 if "%1" == "multi-docs" (
